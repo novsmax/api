@@ -16,6 +16,13 @@ if config.config_file_name is not None:
 
 from app.models.user import User
 from app.models.email_verification import EmailVerification
+from app.models.roles import Role
+from app.models.goal_register import GoalRegister
+from app.models.user_and_goal import UserAndGoal
+from app.models.user_and_role import UserAndRole
+from app.models.trainers import Trainer
+from app.models.clubs import Club
+from app.models.club_organizer import ClubOrganizer
 from app.database import Base
 target_metadata = Base.metadata
 

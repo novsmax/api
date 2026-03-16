@@ -6,6 +6,12 @@ import re
 
 from app.models.user import User
 from app.models.email_verification import EmailVerification
+from app.models.roles import Role
+from app.models.goal_register import GoalRegister
+from app.models.user_and_goal import UserAndGoal
+from app.models.user_and_role import UserAndRole
+from app.models.trainers import Trainer
+from app.models.club_organizer import ClubOrganizer
 from app.schemas.user import UserCreate
 from app.core.security import get_password_hash, verify_password, generate_verification_code
 from app.services.email import email_service
@@ -27,6 +33,13 @@ class AuthService:
         if existing_nickname.scalar_one_or_none():
             raise ValueError("Пользователь с таким nickname уже существует")
         
+        for goal_id in user_data.goal_ids:
+            goal = await db.execute(
+                select(GoalRegister).where(GoalRegister.goal_id == goal_id)
+            )
+            if not goal.scalar_one_or_none():
+                raise ValueError("Цели регистрации с таким ID не существует")
+        
         db_user = User(
             first_name=user_data.first_name,
             last_name=user_data.last_name if hasattr(user_data, 'last_name') else None,
@@ -41,6 +54,32 @@ class AuthService:
         
         db.add(db_user)
         await db.flush()  
+
+        # добавление ролей пользователю + записей в нужные схемы
+        role_ids = set()
+        for goal_id in user_data.goal_ids:
+            db.add(UserAndGoal(user_id=db_user.user_id, goal_id=goal_id))
+            goal_result = await db.execute(
+                select(GoalRegister).where(GoalRegister.goal_id == goal_id)
+            )
+            goal = goal_result.scalar_one()
+            role_ids.add(goal.id_role)
+
+        for role_id in role_ids:
+            db.add(UserAndRole(user_id=db_user.user_id, role_id=role_id))
+
+        for role_id in role_ids:
+            role_result = await db.execute(
+                select(Role).where(Role.role_id == role_id)
+            )
+            role = role_result.scalar_one()
+            if role.name == "trainer":
+                db.add(Trainer(user_id=db_user.user_id, role_id=role_id))
+            elif role.name == "club_organizer":
+                db.add(ClubOrganizer(user_id=db_user.user_id, role_id=role_id, club_id=None))
+        
+        await db.flush()
+
         
         verification_code = generate_verification_code(settings.VERIFICATION_CODE_LENGTH)
         
@@ -130,7 +169,7 @@ class AuthService:
             .where(EmailVerification.user_id == user.user_id)
             .order_by(EmailVerification.created_at.desc())
         )
-        last_verification = last_verification.scalar_one_or_none()
+        last_verification = last_verification.scalars().first()
         
         if not last_verification:
             return True, None

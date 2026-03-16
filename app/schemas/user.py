@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from datetime import date, datetime
-from typing import Optional
+from typing import List, Optional
 
 class UserBase(BaseModel):
     first_name: str = Field(..., min_length=1, max_length=100)
@@ -8,6 +8,7 @@ class UserBase(BaseModel):
     gender: str = Field(..., pattern="^(male|female)$")
     email: EmailStr
     nickname: str = Field(..., min_length=3, max_length=100)
+    goal_ids: List[int] = Field(..., min_length=1, description="Список ID целей регистрации")
 
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8)
