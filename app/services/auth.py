@@ -39,16 +39,6 @@ class AuthService:
         db.add(db_user)
         await db.flush()  
         
-        await db.execute(
-            select(EmailVerification)
-            .where(
-                and_(
-                    EmailVerification.user_id == db_user.user_id,
-                    EmailVerification.verified_at.is_(None)
-                )
-            )
-        )
-        
         verification_code = generate_verification_code(settings.VERIFICATION_CODE_LENGTH)
         
         expires_at = datetime.now() + timedelta(minutes=settings.VERIFICATION_CODE_EXPIRE_MINUTES)
@@ -59,9 +49,14 @@ class AuthService:
         )
         
         db.add(db_verification)
-        await db.commit()
         
-        await email_service.send_verification_code(db_user.email, verification_code)
+        try:
+            await email_service.send_verification_code(db_user.email, verification_code)
+        except Exception as e:
+            await db.rollback()
+            raise ValueError(f"Failed to send verification email: {str(e)}")
+        
+        await db.commit()
         
         return db_user, verification_code
     
@@ -132,7 +127,7 @@ class AuthService:
             .where(EmailVerification.user_id == user.user_id)
             .order_by(EmailVerification.created_at.desc())
         )
-        last_verification = last_verification.scalars().first()
+        last_verification = last_verification.scalar_one_or_none()
         
         if not last_verification:
             return True, None
@@ -164,16 +159,6 @@ class AuthService:
         
         verification_code = generate_verification_code(settings.VERIFICATION_CODE_LENGTH)
         
-        await db.execute(
-            select(EmailVerification)
-            .where(
-                and_(
-                    EmailVerification.user_id == user.user_id,
-                    EmailVerification.verified_at.is_(None)
-                )
-            )
-        )
-        
         expires_at = datetime.now() + timedelta(minutes=settings.VERIFICATION_CODE_EXPIRE_MINUTES)
         db_verification = EmailVerification(
             user_id=user.user_id,
@@ -182,9 +167,14 @@ class AuthService:
         )
         
         db.add(db_verification)
-        await db.commit()
         
-        await email_service.send_verification_code(user.email, verification_code)
+        try:
+            await email_service.send_verification_code(user.email, verification_code)
+        except Exception as e:
+            await db.rollback()
+            raise ValueError(f"Failed to send verification email: {str(e)}")
+        
+        await db.commit()
         
         expires_in = int((expires_at - datetime.now()).total_seconds())
         
