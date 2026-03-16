@@ -44,8 +44,7 @@ class EmailService:
         html_part = MIMEText(html_content, 'html')
         msg.attach(html_part)
         
-        with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
-            server.starttls()
+        with smtplib.SMTP_SSL(self.smtp_host, self.smtp_port) as server:
             server.login(self.smtp_user, self.smtp_password)
             server.send_message(msg)
 
