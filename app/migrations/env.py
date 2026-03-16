@@ -16,7 +16,7 @@ if config.config_file_name is not None:
 
 from app.models.user import User
 from app.models.email_verification import EmailVerification
-from app.models.roles import Role
+from app.models.roles import Roles
 from app.models.goal_register import GoalRegister
 from app.models.user_and_goal import UserAndGoal
 from app.models.user_and_role import UserAndRole
