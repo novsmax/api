@@ -1,7 +1,7 @@
+import asyncio
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from typing import List
 from app.core.config import settings
 
 class EmailService:
@@ -13,7 +13,6 @@ class EmailService:
         self.email_from = settings.EMAIL_FROM
     
     async def send_verification_code(self, to_email: str, code: str):
-        """Отправка кода подтверждения на email"""
         subject = "Подтверждение регистрации в Smart Tracker"
         
         html_content = f"""
@@ -21,22 +20,22 @@ class EmailService:
             <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                 <h2 style="color: #333;">Подтверждение регистрации</h2>
                 <p>Здравствуйте!</p>
-                <p>Для завершения регистрации в Smart Tracker введите следующий код подтверждения:</p>
+                <p>Для завершения регистрации введите код подтверждения:</p>
                 <div style="background-color: #f4f4f4; padding: 20px; text-align: center; font-size: 32px; letter-spacing: 5px; font-weight: bold;">
                     {code}
                 </div>
                 <p>Код действителен в течение {settings.VERIFICATION_CODE_EXPIRE_MINUTES} минут.</p>
-                <p>Если вы не запрашивали регистрацию, просто проигнорируйте это письмо.</p>
                 <hr>
                 <p style="color: #666; font-size: 12px;">С уважением, команда Smart Tracker</p>
             </body>
         </html>
         """
         
-        await self._send_email(to_email, subject, html_content)
+        await asyncio.get_event_loop().run_in_executor(
+            None, self._send_email_sync, to_email, subject, html_content
+        )
     
-    async def _send_email(self, to_email: str, subject: str, html_content: str):
-        """Базовый метод отправки email"""
+    def _send_email_sync(self, to_email: str, subject: str, html_content: str):
         msg = MIMEMultipart('alternative')
         msg['Subject'] = subject
         msg['From'] = self.email_from
@@ -45,13 +44,9 @@ class EmailService:
         html_part = MIMEText(html_content, 'html')
         msg.attach(html_part)
         
-        try:
-            with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
-                server.starttls()
-                server.login(self.smtp_user, self.smtp_password)
-                server.send_message(msg)
-        except Exception as e:
-            print(f"Error sending email: {e}")
-            raise
+        with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
+            server.starttls()
+            server.login(self.smtp_user, self.smtp_password)
+            server.send_message(msg)
 
 email_service = EmailService()

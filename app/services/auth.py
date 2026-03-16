@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Tuple
 
 from app.models.user import User
@@ -132,12 +132,12 @@ class AuthService:
             .where(EmailVerification.user_id == user.user_id)
             .order_by(EmailVerification.created_at.desc())
         )
-        last_verification = last_verification.scalar_one_or_none()
+        last_verification = last_verification.scalars().first()
         
         if not last_verification:
             return True, None
         
-        time_since_last = datetime.now() - last_verification.created_at
+        time_since_last = datetime.now(timezone.utc) - last_verification.created_at
         if time_since_last.total_seconds() < settings.RESEND_COOLDOWN_SECONDS:
             remaining = settings.RESEND_COOLDOWN_SECONDS - int(time_since_last.total_seconds())
             return False, remaining
