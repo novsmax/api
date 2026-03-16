@@ -6,7 +6,7 @@ import re
 
 from app.models.user import User
 from app.models.email_verification import EmailVerification
-from app.models.roles import Role
+from app.models.roles import Roles
 from app.models.goal_register import GoalRegister
 from app.models.user_and_goal import UserAndGoal
 from app.models.user_and_role import UserAndRole
@@ -70,7 +70,7 @@ class AuthService:
 
         for role_id in role_ids:
             role_result = await db.execute(
-                select(Role).where(Role.role_id == role_id)
+                select(Roles).where(Roles.role_id == role_id)
             )
             role = role_result.scalar_one()
             if role.name == "trainer":
