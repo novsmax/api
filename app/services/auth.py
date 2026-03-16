@@ -2,6 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Tuple
+import re
 
 from app.models.user import User
 from app.models.email_verification import EmailVerification
@@ -18,16 +19,18 @@ class AuthService:
             select(User).where(User.email == user_data.email)
         )
         if existing_user.scalar_one_or_none():
-            raise ValueError("User with this email already exists")
+            raise ValueError("Пользователь с таким email уже существует")
         
         existing_nickname = await db.execute(
             select(User).where(User.nickname == user_data.nickname)
         )
         if existing_nickname.scalar_one_or_none():
-            raise ValueError("User with this nickname already exists")
+            raise ValueError("Пользователь с таким nickname уже существует")
         
         db_user = User(
             first_name=user_data.first_name,
+            last_name=user_data.last_name if hasattr(user_data, 'last_name') else None,
+            middle_name=user_data.middle_name if hasattr(user_data, 'middle_name') else None,
             birth_date=user_data.birth_date,
             gender=user_data.gender,
             email=user_data.email,
@@ -54,7 +57,7 @@ class AuthService:
             await email_service.send_verification_code(db_user.email, verification_code)
         except Exception as e:
             await db.rollback()
-            raise ValueError(f"Failed to send verification email: {str(e)}")
+            raise ValueError(f"Не удалось отправить письмо с подтверждением: {str(e)}")
         
         await db.commit()
         
@@ -69,10 +72,10 @@ class AuthService:
         user = user.scalar_one_or_none()
         
         if not user:
-            raise ValueError("User not found")
+            raise ValueError("Пользователь не найден")
         
         if user.is_active:
-            raise ValueError("User already verified")
+            raise ValueError("Пользователь уже подтвержден")
         
         verification = await db.execute(
             select(EmailVerification)
@@ -88,17 +91,17 @@ class AuthService:
         verification = verification.scalar_one_or_none()
         
         if not verification:
-            raise ValueError("No active verification found or code expired")
+            raise ValueError("Не найден активный код подтверждения или срок его действия истек")
         
         if verification.attempts >= settings.MAX_VERIFICATION_ATTEMPTS:
-            raise ValueError("Too many failed attempts")
+            raise ValueError("Слишком много неверных попыток. Запросите новый код")
         
         verification.attempts += 1
         await db.flush()
         
         if verification.code != code:
             await db.commit()
-            raise ValueError("Invalid verification code")
+            raise ValueError("Неверный код подтверждения")
         
         verification.verified_at = datetime.now()
         user.is_active = True
@@ -117,10 +120,10 @@ class AuthService:
         user = user.scalar_one_or_none()
         
         if not user:
-            raise ValueError("User not found")
+            raise ValueError("Пользователь не найден")
         
         if user.is_active:
-            raise ValueError("User already verified")
+            raise ValueError("Пользователь уже подтвержден")
         
         last_verification = await db.execute(
             select(EmailVerification)
@@ -144,7 +147,7 @@ class AuthService:
         
         can_resend, remaining = await self.can_resend_code(db, email)
         if not can_resend:
-            raise ValueError(f"Please wait {remaining} seconds before resending")
+            raise ValueError(f"Подождите {remaining} секунд перед повторной отправкой")
         
         user = await db.execute(
             select(User).where(User.email == email)
@@ -152,10 +155,10 @@ class AuthService:
         user = user.scalar_one_or_none()
         
         if not user:
-            raise ValueError("User not found")
+            raise ValueError("Пользователь не найден")
         
         if user.is_active:
-            raise ValueError("User already verified")
+            raise ValueError("Пользователь уже подтвержден")
         
         verification_code = generate_verification_code(settings.VERIFICATION_CODE_LENGTH)
         
@@ -172,12 +175,32 @@ class AuthService:
             await email_service.send_verification_code(user.email, verification_code)
         except Exception as e:
             await db.rollback()
-            raise ValueError(f"Failed to send verification email: {str(e)}")
+            raise ValueError(f"Не удалось отправить письмо с подтверждением: {str(e)}")
         
         await db.commit()
         
         expires_in = int((expires_at - datetime.now()).total_seconds())
         
         return verification_code, expires_in
+    
+    async def check_nickname_unique(self, db: AsyncSession, nickname: str) -> Tuple[bool, str]:
+        """
+        Проверяет уникальность nickname.
+        """
+        if len(nickname) < 3:
+            return False, "Никнейм должен содержать минимум 3 символа"
+        if len(nickname) > 100:
+            return False, "Никнейм должен содержать максимум 100 символов"
+        
+        if not re.match(r'^[a-zA-Z0-9_.@-]+$', nickname):
+            return False, "Никнейм может содержать только буквы, цифры и символы _ . @ -"
+        
+        existing_user = await db.execute(
+            select(User).where(User.nickname == nickname)
+        )
+        if existing_user.scalar_one_or_none():
+            return False, "Этот никнейм уже занят"
+        
+        return True, "Никнейм доступен"
 
 auth_service = AuthService()

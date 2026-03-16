@@ -6,7 +6,13 @@ from sqlalchemy import select
 
 from app.database import get_db
 from app.models.user import User
-from app.schemas.user import UserCreate, UserResponse, UserLogin
+from app.schemas.user import (
+    NicknameCheckRequest, 
+    NicknameCheckResponse, 
+    UserCreate, 
+    UserResponse, 
+    UserLogin
+)
 from app.schemas.email_verification import (
     EmailVerificationRequest, 
     EmailVerificationCode, 
@@ -33,10 +39,10 @@ async def register(
         user, code = await auth_service.register_user(db, user_data)
         
         return {
-            "message": "Registration successful. Please check your email for verification code.",
+            "message": "Регистрация успешна. Проверьте email для получения кода подтверждения.",
             "email": user.email,
             "expires_in": settings.VERIFICATION_CODE_EXPIRE_MINUTES * 60,
-            "debug_code": code
+            "debug_code": code  # Убрать в production
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -48,13 +54,15 @@ async def verify_email(
 ):
     """
     Подтверждение email с помощью кода из письма.
-    При успешном подтверждении пользователь автоматически авторизуется.
+
+    При успешном подтверждении пользователь автоматически авторизуется
+    и получает access и refresh токены.
     """
     try:
         user = await auth_service.verify_email(db, request.email, request.code)
         
         if not user:
-            raise HTTPException(status_code=400, detail="Verification failed")
+            raise HTTPException(status_code=400, detail="Ошибка подтверждения")
         
         access_token = create_access_token(
             data={"sub": user.email, "user_id": user.user_id}
@@ -89,7 +97,7 @@ async def resend_verification_code(
         expires_at = datetime.now() + timedelta(seconds=expires_in)
         
         return EmailVerificationResponse(
-            message="Verification code resent successfully",
+            message="Код подтверждения отправлен повторно",
             expires_at=expires_at,
             remaining_seconds=expires_in
         )
@@ -110,16 +118,16 @@ async def login(
     user = result.scalar_one_or_none()
     
     if not user:
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        raise HTTPException(status_code=401, detail="Неверный email или пароль")
     
     if not user.is_active:
         raise HTTPException(
             status_code=401, 
-            detail="Email not verified. Please check your email for verification code."
+            detail="Email не подтвержден. Проверьте почту для получения кода подтверждения."
         )
     
     if not verify_password(credentials.password, user.password):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        raise HTTPException(status_code=401, detail="Неверный email или пароль")
     
     access_token = create_access_token(
         data={"sub": user.email, "user_id": user.user_id}
@@ -152,12 +160,12 @@ async def refresh_token(
         )
         
         if payload.get("type") != "refresh":
-            raise HTTPException(status_code=401, detail="Invalid token type")
+            raise HTTPException(status_code=401, detail="Неверный тип токена")
         
         email = payload.get("sub")
         user_id = payload.get("user_id")
         if not email or not user_id:
-            raise HTTPException(status_code=401, detail="Invalid token")
+            raise HTTPException(status_code=401, detail="Неверный токен")
         
         result = await db.execute(
             select(User).where(User.email == email)
@@ -165,7 +173,7 @@ async def refresh_token(
         user = result.scalar_one_or_none()
         
         if not user or user.jwt_reload != refresh_token:
-            raise HTTPException(status_code=401, detail="Invalid refresh token")
+            raise HTTPException(status_code=401, detail="Неверный refresh токен")
         
         new_access_token = create_access_token(
             data={"sub": user.email, "user_id": user.user_id}
@@ -183,4 +191,23 @@ async def refresh_token(
         )
         
     except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+        raise HTTPException(status_code=401, detail="Неверный токен")
+
+@router.post("/check-nickname", response_model=NicknameCheckResponse)
+async def check_nickname(
+    request: NicknameCheckRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Проверка доступности nickname.
+    """
+    is_available, message = await auth_service.check_nickname_unique(
+        db, 
+        request.nickname
+    )
+    
+    return NicknameCheckResponse(
+        nickname=request.nickname,
+        is_available=is_available,
+        message=message
+    )

@@ -17,7 +17,7 @@ class UserCreate(UserBase):
     @classmethod
     def passwords_match(cls, v: str, info):
         if 'password' in info.data and v != info.data['password']:
-            raise ValueError('Passwords do not match')
+            raise ValueError('Пароли не совпадают')
         return v
     
 
@@ -32,3 +32,11 @@ class UserResponse(UserBase):
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
+class NicknameCheckRequest(BaseModel):
+    nickname: str = Field(..., min_length=3, max_length=100)
+
+class NicknameCheckResponse(BaseModel):
+    nickname: str
+    is_available: bool
+    message: str
