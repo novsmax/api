@@ -24,6 +24,7 @@ from app.models.trainers import Trainer
 from app.models.clubs import Club
 from app.models.club_organizer import ClubOrganizer
 from app.database import Base
+from app.models.clubs import Club
 target_metadata = Base.metadata
 
 def run_migrations_offline() -> None:

@@ -12,6 +12,7 @@ from app.models.user_and_goal import UserAndGoal
 from app.models.user_and_role import UserAndRole
 from app.models.trainers import Trainer
 from app.models.club_organizer import ClubOrganizer
+from app.models.clubs import Club
 from app.schemas.user import UserCreate
 from app.core.security import get_password_hash, verify_password, generate_verification_code
 from app.services.email import email_service

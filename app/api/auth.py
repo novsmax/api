@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timedelta
 from jose import jwt, JWTError
 from sqlalchemy import select
+from pydantic import BaseModel
 
 from app.database import get_db
 from app.models.user import User
@@ -17,7 +18,8 @@ from app.schemas.email_verification import (
     EmailVerificationRequest, 
     EmailVerificationCode, 
     EmailVerificationResponse,
-    TokenResponse
+    TokenResponse,
+    RefreshTokenRequest
 )
 from app.services.auth import auth_service
 from app.core.config import settings
@@ -146,7 +148,7 @@ async def login(
 
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh_token(
-    refresh_token: str,
+    request: RefreshTokenRequest,
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -154,8 +156,8 @@ async def refresh_token(
     """
     try:
         payload = jwt.decode(
-            refresh_token, 
-            settings.SECRET_KEY, 
+            request.refresh_token,
+            settings.SECRET_KEY,
             algorithms=[settings.ALGORITHM]
         )
         
@@ -167,12 +169,10 @@ async def refresh_token(
         if not email or not user_id:
             raise HTTPException(status_code=401, detail="Неверный токен")
         
-        result = await db.execute(
-            select(User).where(User.email == email)
-        )
+        result = await db.execute(select(User).where(User.email == email))
         user = result.scalar_one_or_none()
         
-        if not user or user.jwt_reload != refresh_token:
+        if not user or user.jwt_reload != request.refresh_token:
             raise HTTPException(status_code=401, detail="Неверный refresh токен")
         
         new_access_token = create_access_token(
