@@ -33,6 +33,8 @@ api/
 │   │   └── registration.py
 │   ├── api/
 │   │   └── auth.py             # Эндпоинты авторизации
+│   │   └── goals.py             # Эндпоинты целей регистрации
+│   │   └── roles.py             # Эндпоинты для ролей пользователя
 │   ├── services/
 │   │   ├── auth.py             # Бизнес-логика авторизации
 │   │   └── email.py            # Отправка email
@@ -71,10 +73,23 @@ python migrate.py --env prod history
 
 ### Пересборка после изменений
 ```bash
-git pull
 docker stop smarttracker-api && docker rm smarttracker-api
 docker build -t smarttracker-api .
 docker run -d --name smarttracker-api --env-file ~/api/.env -p 8000:8000 smarttracker-api
+```
+
+### С помощью скрипта 
+```
+./deploy.sh 
+```
+
+### Просмотр логов
+```
+# последние логи
+docker logs smarttracker-api
+
+# постоянные логи
+docker logs smarttracker-api -f
 ```
 
 ## Эндпоинты
@@ -87,7 +102,9 @@ docker run -d --name smarttracker-api --env-file ~/api/.env -p 8000:8000 smarttr
 | POST | /auth/login | Вход в систему |
 | POST | /auth/refresh | Обновление токенов |
 | POST | /auth/check-nickname | Проверка доступности никнейма |
-
+| GET | /role/check-nickname | Проверка доступности никнейма |
+| GET | /role/user_roles-nickname | Проверка доступности никнейма |
+| GET | /auth/check-nickname | Проверка доступности никнейма |
 ## Тестирование
 ```bash
 pytest tests/ -v
