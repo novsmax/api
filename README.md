@@ -102,9 +102,9 @@ docker logs smarttracker-api -f
 | POST | /auth/login | Вход в систему |
 | POST | /auth/refresh | Обновление токенов |
 | POST | /auth/check-nickname | Проверка доступности никнейма |
-| GET | /role/check-nickname | Проверка доступности никнейма |
-| GET | /role/user_roles-nickname | Проверка доступности никнейма |
-| GET | /auth/check-nickname | Проверка доступности никнейма |
+| GET | /role/ | Доступные роли |
+| GET | /role/user_roles | Получение ролей пользователя по его почте |
+| GET | /goal/ | Цели регистрации |
 ## Тестирование
 ```bash
 pytest tests/ -v
