@@ -9,7 +9,9 @@ from app.schemas.registration import  GoalRegisterResponse
 
 router = APIRouter(prefix="/goal", tags=["goals"])
 
-@router.get("/", response_model=list[GoalRegisterResponse])
+@router.get("/", 
+    summary="Цели регистрации",
+    response_model=list[GoalRegisterResponse])
 async def get_goals(db: AsyncSession = Depends(get_db)):
     try:
         result = await db.execute(select(GoalRegister))

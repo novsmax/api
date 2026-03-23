@@ -31,16 +31,15 @@ from app.core.security import create_access_token, create_refresh_token, verify_
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
-@router.post("/register", response_model=dict)
+@router.post("/register", 
+    summary="Регистрация пользователя",
+    description="После регистрации на email отправляется код подтверждения",
+    response_model=dict)
 async def register(
     user_data: UserCreate,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    Регистрация нового пользователя.
-    После регистрации на email отправляется код подтверждения.
-    """
     try:
         user, code = await auth_service.register_user(db, user_data)
         
@@ -52,17 +51,14 @@ async def register(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.post("/verify-email", response_model=TokenResponse)
+@router.post("/verify-email", 
+    summary="Потдвержение кода после регистарции",
+    description="При успешном подтверждении пользователь автоматически авторизуется и получает access и refresh токены",
+    response_model=TokenResponse)
 async def verify_email(
     request: EmailVerificationCode,
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    Подтверждение email с помощью кода из письма.
-
-    При успешном подтверждении пользователь автоматически авторизуется
-    и получает access и refresh токены.
-    """
     try:
         user = await auth_service.verify_email(db, request.email, request.code)
         
@@ -87,7 +83,10 @@ async def verify_email(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.post("/resend-code", response_model=EmailVerificationResponse)
+@router.post("/resend-code", 
+    summary="Потворная отправка кода потдерждения (регистарция)",
+    description="Новый код будет доступен через 2 минуты после предыдущей отправки",
+    response_model=EmailVerificationResponse)
 async def resend_verification_code(
     request: EmailVerificationRequest,
     db: AsyncSession = Depends(get_db)
@@ -109,14 +108,14 @@ async def resend_verification_code(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login", 
+    summary="Вход зарегестрированных пользователей",
+    description="Вход в систему для уже подтвержденных пользователей",
+    response_model=TokenResponse)
 async def login(
     credentials: UserLogin,
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    Вход в систему для уже подтвержденных пользователей.
-    """
     result = await db.execute(
         select(User).where(User.email == credentials.email)
     )
@@ -149,7 +148,10 @@ async def login(
         refresh_token=new_refresh_token 
     )
 
-@router.post("/refresh", response_model=TokenResponse)
+@router.post("/refresh", 
+    summary="Обновление токенов",
+    description="Обновление access token с помощью refresh token",
+    response_model=TokenResponse)
 async def refresh_tokens(
     request: RefreshTokenRequest,
     db: AsyncSession = Depends(get_db)
@@ -196,14 +198,14 @@ async def refresh_tokens(
     except JWTError:
         raise HTTPException(status_code=401, detail="Неверный токен")
 
-@router.post("/check-nickname", response_model=NicknameCheckResponse)
+@router.post("/check-nickname", 
+    summary="Проверка доступности nickname",
+    description="Проверка доступности nickname",
+    response_model=NicknameCheckResponse)
 async def check_nickname(
     request: NicknameCheckRequest,
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    Проверка доступности nickname.
-    """
     is_available, message = await auth_service.check_nickname_unique(
         db, 
         request.nickname
@@ -215,7 +217,9 @@ async def check_nickname(
         message=message
     )
 
-@router.post("/password-reset/request")
+@router.post("/password-reset/request",
+    summary="Запрос кода для сброса пароля",
+    description="Отправляется код для сброса на указанную почту",)
 async def request_password_reset(
     request: PasswordResetRequest,
     db: AsyncSession = Depends(get_db)
@@ -228,7 +232,9 @@ async def request_password_reset(
     
     return {"message": "Если email существует и подтверждён — код отправлен"}
 
-@router.post("/password-reset/verify-code")
+@router.post("/password-reset/verify-code",
+    summary="Потдвержение кода после сброса пароля",
+    description="Новый код будет доступен через 2 минуты после предыдущей отправки")
 async def verify_code_password_reset(
     request: PasswordResetVerifyCode,
     db: AsyncSession = Depends(get_db)
@@ -239,7 +245,9 @@ async def verify_code_password_reset(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.post("/password-reset/resend-verify-code")
+@router.post("/password-reset/resend-verify-code",
+    summary="Потворная отправка кода потдерждения (сброс пароля)",
+    description="Новый код будет доступен через 2 минуты после предыдущей отправки")
 async def resend_code_password_reset(
     request: PasswordResetResendCode,
     db: AsyncSession = Depends(get_db)
@@ -254,7 +262,6 @@ async def resend_code_password_reset(
 @router.post("/password-reset/confirm", 
     summary="Подтверждение нового пароля",
     description="При успешном подтверждении обновляется пароль пользователя",
-    tags=["Новый пароль"],
     response_model=TokenResponse)
 async def confirm_password_reset(
     request: PasswordResetConfirm,

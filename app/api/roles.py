@@ -11,7 +11,9 @@ from app.schemas.registration import RoleResponse
 
 router = APIRouter(prefix="/role", tags=["roles"])
 
-@router.get("/", response_model=list[RoleResponse])
+@router.get("/", 
+    summary="Роли пользователей",
+    response_model=list[RoleResponse])
 async def roles(db: AsyncSession = Depends(get_db)):
     try:
         result = await db.execute(select(Roles))
@@ -21,7 +23,9 @@ async def roles(db: AsyncSession = Depends(get_db)):
 
     return roles
 
-@router.get("/user_roles", response_model=list[RoleResponse])
+@router.get("/user_roles", 
+    summary="Поулчение роли пользователя по его email",
+    response_model=list[RoleResponse])
 async def user_roles(
         email: str,
         db: AsyncSession = Depends(get_db)
