@@ -139,7 +139,7 @@ class AuthService:
         verification.attempts += 1
         await db.flush()
         
-        if not verify_password(code, verification.code):
+        if code != verification.code:
             await db.commit()
             raise ValueError("Неверный код подтверждения")
         

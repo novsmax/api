@@ -46,7 +46,6 @@ async def register(
             "message": "Регистрация успешна. Проверьте email для получения кода подтверждения.",
             "email": user.email,
             "expires_in": settings.VERIFICATION_CODE_EXPIRE_MINUTES * 60,
-            "debug_code": code  # Убрать в production
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
