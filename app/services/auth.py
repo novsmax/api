@@ -112,8 +112,7 @@ class AuthService:
         user = user.scalar_one_or_none()
         
         if not user:
-            raise ValueError("Пользователь не найден")
-        
+            return
         if user.is_active:
             raise ValueError("Пользователь уже подтвержден")
         
@@ -159,11 +158,8 @@ class AuthService:
         )
         user = user.scalar_one_or_none()
         
-        if not user:
-            raise ValueError("Пользователь не найден")
-        
-        if user.is_active:
-            raise ValueError("Пользователь уже подтвержден")
+        if not user or not user.is_active:
+            return # не выдаём информацию о существовании пользователя
         
         last_verification = await db.execute(
             select(EmailVerification)
@@ -194,19 +190,15 @@ class AuthService:
         )
         user = user.scalar_one_or_none()
         
-        if not user:
-            raise ValueError("Пользователь не найден")
-        
-        if user.is_active:
-            raise ValueError("Пользователь уже подтвержден")
+        if not user or not user.is_active:
+            return # не выдаём информацию о существовании пользователя
         
         verification_code = generate_verification_code(settings.VERIFICATION_CODE_LENGTH)
-        code_hash = get_password_hash(verification_code)
         
         expires_at = datetime.now(timezone.utc) + timedelta(minutes=settings.VERIFICATION_CODE_EXPIRE_MINUTES)
         db_verification = EmailVerification(
             user_id=user.user_id,
-            code=code_hash,
+            code=verification_code,
             expires_at=expires_at
         )
         
@@ -271,6 +263,62 @@ class AuthService:
         await db.commit()
         # всегда Труe, чтобы не выдавать информацию о существовании email
 
+    async def verify_code_password(self, db: AsyncSession, email: str, verification_code: str) -> Tuple[bool]:
+        "проверка кода"
+        user_result = await db.execute(
+            select(User).where(User.email == email)
+        )
+        user = user_result.scalar_one_or_none()
+
+        if not user or not user.is_active:
+            return # не выдаём информацию о существовании пользователя
+
+        if not user.password_reset_token_hash or not user.password_reset_token_expires_at:
+            raise ValueError("Неверный код или срок его действия истёк")
+        
+        if datetime.now(timezone.utc) > user.password_reset_token_expires_at:
+            raise ValueError("Неверный код или срок его действия истёк")
+
+        if not verify_password(verification_code, user.password_reset_token_hash):
+            raise ValueError("Неверный код или срок его действия истёк")
+
+        return True
+
+    async def resend_password_code(self, db: AsyncSession, email: str) -> None:
+        """Повторная отправка кода подтверждения (пароль)"""
+
+        user = await db.execute(
+            select(User).where(User.email == email)
+        )
+        user = user.scalar_one_or_none()
+        
+        if not user or not user.is_active:
+            return # не выдаём информацию о существовании пользователя
+
+        if user.password_reset_token_expires_at:
+            full_expire = timedelta(minutes=settings.VERIFICATION_CODE_EXPIRE_MINUTES_PASSWORD_RESET)
+            created_at = user.password_reset_token_expires_at - full_expire
+            time_since = datetime.now(timezone.utc) - created_at
+            if time_since.total_seconds() < settings.RESEND_COOLDOWN_SECONDS:
+                remaining = settings.RESEND_COOLDOWN_SECONDS - int(time_since.total_seconds())
+                raise ValueError(f"Подождите {remaining} секунд перед повторной отправкой")
+
+        
+        verification_code = generate_verification_code(settings.VERIFICATION_CODE_LENGTH)
+        code_hash = get_password_hash(verification_code)
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=settings.VERIFICATION_CODE_EXPIRE_MINUTES_PASSWORD_RESET)
+
+        user.password_reset_token_hash = code_hash
+        user.password_reset_token_expires_at = expires_at
+        
+        try:
+            await email_service.send_password_reset_code(user.email, verification_code)
+        except Exception as e:
+            await db.rollback()
+            raise ValueError(f"Не удалось отправить письмо: {str(e)}")
+
+        await db.commit()
+
     async def confirm_password_reset(self, db: AsyncSession, email: str, verification_code: str, new_password: str) -> Tuple[User]:
         """Подтверждает сброс пароля"""
         
@@ -282,13 +330,7 @@ class AuthService:
         if not user or not user.is_active:
             return # не выдаём информацию о существовании пользователя
 
-        if not user.password_reset_token_hash or not user.password_reset_token_expires_at:
-            raise ValueError("Неверный код или срок его действия истёк")
-        
-        if datetime.now(timezone.utc) > user.password_reset_token_expires_at:
-            raise ValueError("Неверный код или срок его действия истёк")
-
-        if not verify_password(verification_code, user.password_reset_token_hash):
+        if not await  self.verify_code_password(db, email, verification_code):
             raise ValueError("Неверный код или срок его действия истёк")
         
         user.password = get_password_hash(new_password)

@@ -21,7 +21,9 @@ from app.schemas.email_verification import (
     TokenResponse,
     RefreshTokenRequest,
     PasswordResetRequest,
-    PasswordResetConfirm
+    PasswordResetConfirm,
+    PasswordResetVerifyCode,
+    PasswordResetResendCode
 )
 from app.services.auth import auth_service
 from app.core.config import settings
@@ -97,7 +99,7 @@ async def resend_verification_code(
     try:
         code, expires_in = await auth_service.resend_verification_code(db, request.email)
         
-        expires_at = datetime.now() + timedelta(seconds=expires_in)
+        expires_at = datetime.now(timezone.utc) + timedelta(seconds=expires_in)
         
         return EmailVerificationResponse(
             message="Код подтверждения отправлен повторно",
@@ -226,19 +228,43 @@ async def request_password_reset(
     
     return {"message": "Если email существует и подтверждён — код отправлен"}
 
-@router.post("/password-reset/confirm", response_model=TokenResponse)
+@router.post("/password-reset/verify-code")
+async def verify_code_password_reset(
+    request: PasswordResetVerifyCode,
+    db: AsyncSession = Depends(get_db)
+):
+    try:
+        await auth_service.verify_code_password(db, request.email, request.code)
+        return {"message": "Код подтверждён"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/password-reset/resend-verify-code")
+async def resend_code_password_reset(
+    request: PasswordResetResendCode,
+    db: AsyncSession = Depends(get_db)
+):
+    try:
+        await auth_service.resend_password_code(db, request.email)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return {"message": "Если email существует и подтверждён — код отправлен"}
+
+@router.post("/password-reset/confirm", 
+    summary="Подтверждение нового пароля",
+    description="При успешном подтверждении обновляется пароль пользователя",
+    tags=["Новый пароль"],
+    response_model=TokenResponse)
 async def confirm_password_reset(
     request: PasswordResetConfirm,
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    Подтверждение сброса пароля
-    """
     try:
         user = await auth_service.confirm_password_reset(
             db, 
-            request.email, 
-            request.code, 
+            request.email,  
+            request.code,
             request.password
         )
 

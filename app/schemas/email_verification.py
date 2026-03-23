@@ -37,3 +37,10 @@ class PasswordResetConfirm(BaseModel):
         if 'password' in info.data and v != info.data['password']:
             raise ValueError('Пароли не совпадают')
         return v
+
+class PasswordResetVerifyCode(BaseModel):
+    email: EmailStr
+    code: str = Field(..., min_length=6, max_length=6)
+
+class PasswordResetResendCode(BaseModel):
+    email: EmailStr
