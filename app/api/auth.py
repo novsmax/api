@@ -255,7 +255,7 @@ async def confirm_password_reset(
 
         return TokenResponse(
             access_token=access_token,
-            refresh_token=refresh_token
+            refresh_token=new_refresh_token
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
