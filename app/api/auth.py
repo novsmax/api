@@ -149,7 +149,7 @@ async def login(
     )
 
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh_token(
+async def refresh_tokens(
     request: RefreshTokenRequest,
     db: AsyncSession = Depends(get_db)
 ):
