@@ -18,6 +18,8 @@ class User(Base):
     nickname = Column(String(100), nullable=False, unique=True)
     jwt_session = Column(String(500), nullable=True)
     jwt_reload = Column(String(500), nullable=True)
+    password_reset_token_hash = Column(String(255), nullable=True)
+    password_reset_token_expires_at = Column(DateTime(timezone=True), nullable=True)
     is_active = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

@@ -83,11 +83,12 @@ class AuthService:
 
         
         verification_code = generate_verification_code(settings.VERIFICATION_CODE_LENGTH)
+        verification_hash = get_password_hash(verification_code)
         
-        expires_at = datetime.now() + timedelta(minutes=settings.VERIFICATION_CODE_EXPIRE_MINUTES)
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=settings.VERIFICATION_CODE_EXPIRE_MINUTES)
         db_verification = EmailVerification(
             user_id=db_user.user_id,
-            code=verification_code,
+            code=verification_hash,
             expires_at=expires_at
         )
         
@@ -139,7 +140,7 @@ class AuthService:
         verification.attempts += 1
         await db.flush()
         
-        if verification.code != code:
+        if not verify_password(code, verification.code):
             await db.commit()
             raise ValueError("Неверный код подтверждения")
         
@@ -201,11 +202,12 @@ class AuthService:
             raise ValueError("Пользователь уже подтвержден")
         
         verification_code = generate_verification_code(settings.VERIFICATION_CODE_LENGTH)
+        code_hash = get_password_hash(verification_code)
         
-        expires_at = datetime.now() + timedelta(minutes=settings.VERIFICATION_CODE_EXPIRE_MINUTES)
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=settings.VERIFICATION_CODE_EXPIRE_MINUTES)
         db_verification = EmailVerification(
             user_id=user.user_id,
-            code=verification_code,
+            code=code_hash,
             expires_at=expires_at
         )
         
@@ -243,4 +245,61 @@ class AuthService:
         
         return True, "Никнейм доступен"
 
+    async def request_password_reset(self, db: AsyncSession, email: str) -> None:
+        """Запрос на сброс пароля - отправляет код на email"""
+        
+        user = await db.execute(
+            select(User).where(User.email == email)
+        )
+        user = user.scalar_one_or_none()
+        
+        if not user or not user.is_active:
+            return # не выдаём информацию о существовании пользователя
+
+        verification_code = generate_verification_code(settings.VERIFICATION_CODE_LENGTH)
+        code_hash = get_password_hash(verification_code)
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=settings.VERIFICATION_CODE_EXPIRE_MINUTES_PASSWORD_RESET)
+
+        user.password_reset_token_hash = code_hash
+        user.password_reset_token_expires_at = expires_at
+
+        try:
+            await email_service.send_password_reset_code(user.email, verification_code)
+        except Exception as e:
+            await db.rollback()
+            raise ValueError(f"Не удалось отправить письмо: {str(e)}")
+
+        await db.commit()
+        # всегда Труe, чтобы не выдавать информацию о существовании email
+
+    async def confirm_password_reset(self, db: AsyncSession, email: str, verification_code: str, new_password: str) -> Tuple[User]:
+        """Подтверждает сброс пароля"""
+        
+        user_result = await db.execute(
+            select(User).where(User.email == email)
+        )
+        user = user_result.scalar_one_or_none()
+        
+        if not user or not user.is_active:
+            return # не выдаём информацию о существовании пользователя
+
+        if not user.password_reset_token_hash or not user.password_reset_token_expires_at:
+            raise ValueError("Неверный код или срок его действия истёк")
+        
+        if datetime.now(timezone.utc) > user.password_reset_token_expires_at:
+            raise ValueError("Неверный код или срок его действия истёк")
+
+        if not verify_password(verification_code, user.password_reset_token_hash):
+            raise ValueError("Неверный код или срок его действия истёк")
+        
+        user.password = get_password_hash(new_password)
+        user.password_reset_token_hash = None
+        user.password_reset_token_expires_at = None
+        user.jwt_reload = None # выходим со всех устройств
+        
+        await db.commit()
+        await db.refresh(user)
+        
+        return user
+        
 auth_service = AuthService()

@@ -19,7 +19,9 @@ from app.schemas.email_verification import (
     EmailVerificationCode, 
     EmailVerificationResponse,
     TokenResponse,
-    RefreshTokenRequest
+    RefreshTokenRequest,
+    PasswordResetRequest,
+    PasswordResetConfirm
 )
 from app.services.auth import auth_service
 from app.core.config import settings
@@ -211,3 +213,49 @@ async def check_nickname(
         is_available=is_available,
         message=message
     )
+
+@router.post("/password-reset/request")
+async def request_password_reset(
+    request: PasswordResetRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Запрос сброса пароля
+    """
+
+    await auth_service.request_password_reset(db, request.email)
+    
+    return {"message": "Если email существует и подтверждён — код отправлен"}
+
+@router.post("/password-reset/comfirm", response_model=TokenResponse)
+async def comfirm_password_reset(
+    request: PasswordResetConfirm,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Подтверждение сброса пароля
+    """
+    try:
+        await auth_service.confirm_password_reset(
+            db, 
+            request.email, 
+            request.code, 
+            request.password
+        )
+
+        access_token = create_access_token(
+            data={"sub": user.email, "user_id": user.user_id}
+        )
+        refresh_token = create_refresh_token(
+            data={"sub": user.email, "user_id": user.user_id}
+        )
+
+        user.jwt_reload = new_refresh_token
+        await db.commit()
+
+        return TokenResponse(
+            access_token=access_token,
+            refresh_token=refresh_token
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))

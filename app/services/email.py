@@ -34,6 +34,29 @@ class EmailService:
         await asyncio.get_event_loop().run_in_executor(
             None, self._send_email_sync, to_email, subject, html_content
         )
+
+    async def send_password_reset_code(self, to_email: str, code: str):
+        subject = "Сброс пароля для Smart Tracker"
+        
+        html_content = f"""
+        <html>
+            <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #333;">Сброс пароля</h2>
+                <p>Здравствуйте!</p>
+                <p>Для завершения сброса пароля введите код подтверждения:</p>
+                <div style="background-color: #f4f4f4; padding: 20px; text-align: center; font-size: 32px; letter-spacing: 5px; font-weight: bold;">
+                    {code}
+                </div>
+                <p>Код действителен в течение {settings.VERIFICATION_CODE_EXPIRE_MINUTES_PASSWORD_RESET} минут.</p>
+                <hr>
+                <p style="color: #666; font-size: 12px;">С уважением, команда Smart Tracker</p>
+            </body>
+        </html>
+        """
+        
+        await asyncio.get_event_loop().run_in_executor(
+            None, self._send_email_sync, to_email, subject, html_content
+        )
     
     def _send_email_sync(self, to_email: str, subject: str, html_content: str):
         msg = MIMEMultipart('alternative')
