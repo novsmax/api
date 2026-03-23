@@ -227,8 +227,8 @@ async def request_password_reset(
     
     return {"message": "Если email существует и подтверждён — код отправлен"}
 
-@router.post("/password-reset/comfirm", response_model=TokenResponse)
-async def comfirm_password_reset(
+@router.post("/password-reset/confirm", response_model=TokenResponse)
+async def confirm_password_reset(
     request: PasswordResetConfirm,
     db: AsyncSession = Depends(get_db)
 ):
@@ -236,7 +236,7 @@ async def comfirm_password_reset(
     Подтверждение сброса пароля
     """
     try:
-        await auth_service.confirm_password_reset(
+        user = await auth_service.confirm_password_reset(
             db, 
             request.email, 
             request.code, 
@@ -246,7 +246,7 @@ async def comfirm_password_reset(
         access_token = create_access_token(
             data={"sub": user.email, "user_id": user.user_id}
         )
-        refresh_token = create_refresh_token(
+        new_refresh_token  = create_refresh_token(
             data={"sub": user.email, "user_id": user.user_id}
         )
 
