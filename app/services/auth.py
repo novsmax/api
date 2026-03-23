@@ -83,12 +83,11 @@ class AuthService:
 
         
         verification_code = generate_verification_code(settings.VERIFICATION_CODE_LENGTH)
-        verification_hash = get_password_hash(verification_code)
         
         expires_at = datetime.now(timezone.utc) + timedelta(minutes=settings.VERIFICATION_CODE_EXPIRE_MINUTES)
         db_verification = EmailVerification(
             user_id=db_user.user_id,
-            code=verification_hash,
+            code=verification_code,
             expires_at=expires_at
         )
         
