@@ -71,16 +71,16 @@ async def verify_email(
         access_token = create_access_token(
             data={"sub": user.email, "user_id": user.user_id}
         )
-        refresh_token = create_refresh_token(
+        new_refresh_token  = create_refresh_token(
             data={"sub": user.email, "user_id": user.user_id}
         )
         
-        user.jwt_reload = refresh_token
+        user.jwt_reload = new_refresh_token 
         await db.commit()
         
         return TokenResponse(
             access_token=access_token,
-            refresh_token=refresh_token
+            refresh_token=new_refresh_token 
         )
         
     except ValueError as e:
@@ -136,16 +136,16 @@ async def login(
     access_token = create_access_token(
         data={"sub": user.email, "user_id": user.user_id}
     )
-    refresh_token = create_refresh_token(
+    new_refresh_token  = create_refresh_token(
         data={"sub": user.email, "user_id": user.user_id}
     )
     
-    user.jwt_reload = refresh_token
+    user.jwt_reload = new_refresh_token 
     await db.commit()
     
     return TokenResponse(
         access_token=access_token,
-        refresh_token=refresh_token
+        refresh_token=new_refresh_token 
     )
 
 @router.post("/refresh", response_model=TokenResponse)
