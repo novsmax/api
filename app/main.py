@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, roles, goals
+from app.api import auth, roles, goals, password
 
 app = FastAPI(
     title="Smart Tracker API",
@@ -19,6 +19,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(roles.router)
 app.include_router(goals.router)
+app.include_router(password.router)
 
 @app.get("/")
 async def root():

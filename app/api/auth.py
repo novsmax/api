@@ -19,11 +19,7 @@ from app.schemas.email_verification import (
     EmailVerificationCode, 
     EmailVerificationResponse,
     TokenResponse,
-    RefreshTokenRequest,
-    PasswordResetRequest,
-    PasswordResetConfirm,
-    PasswordResetVerifyCode,
-    PasswordResetResendCode
+    RefreshTokenRequest
 )
 from app.services.auth import auth_service
 from app.core.config import settings
@@ -52,7 +48,7 @@ async def register(
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.post("/verify-email", 
-    summary="Потдвержение кода после регистарции",
+    summary="Подтверждение кода после регистарции",
     description="При успешном подтверждении пользователь автоматически авторизуется и получает access и refresh токены",
     response_model=TokenResponse)
 async def verify_email(
@@ -84,7 +80,7 @@ async def verify_email(
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.post("/resend-code", 
-    summary="Потворная отправка кода потдерждения (регистарция)",
+    summary="Повторная отправка кода подтверждения (регистарция)",
     description="Новый код будет доступен через 2 минуты после предыдущей отправки",
     response_model=EmailVerificationResponse)
 async def resend_verification_code(
@@ -216,78 +212,3 @@ async def check_nickname(
         is_available=is_available,
         message=message
     )
-
-@router.post("/password-reset/request",
-    summary="Запрос кода для сброса пароля",
-    description="Отправляется код для сброса на указанную почту",)
-async def request_password_reset(
-    request: PasswordResetRequest,
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Запрос сброса пароля
-    """
-
-    await auth_service.request_password_reset(db, request.email)
-    
-    return {"message": "Если email существует и подтверждён — код отправлен"}
-
-@router.post("/password-reset/verify-code",
-    summary="Потдвержение кода после сброса пароля",
-    description="Новый код будет доступен через 2 минуты после предыдущей отправки")
-async def verify_code_password_reset(
-    request: PasswordResetVerifyCode,
-    db: AsyncSession = Depends(get_db)
-):
-    try:
-        await auth_service.verify_code_password(db, request.email, request.code)
-        return {"message": "Код подтверждён"}
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-@router.post("/password-reset/resend-verify-code",
-    summary="Потворная отправка кода потдерждения (сброс пароля)",
-    description="Новый код будет доступен через 2 минуты после предыдущей отправки")
-async def resend_code_password_reset(
-    request: PasswordResetResendCode,
-    db: AsyncSession = Depends(get_db)
-):
-    try:
-        await auth_service.resend_password_code(db, request.email)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-    return {"message": "Если email существует и подтверждён — код отправлен"}
-
-@router.post("/password-reset/confirm", 
-    summary="Подтверждение нового пароля",
-    description="При успешном подтверждении обновляется пароль пользователя",
-    response_model=TokenResponse)
-async def confirm_password_reset(
-    request: PasswordResetConfirm,
-    db: AsyncSession = Depends(get_db)
-):
-    try:
-        user = await auth_service.confirm_password_reset(
-            db, 
-            request.email,  
-            request.code,
-            request.password
-        )
-
-        access_token = create_access_token(
-            data={"sub": user.email, "user_id": user.user_id}
-        )
-        new_refresh_token  = create_refresh_token(
-            data={"sub": user.email, "user_id": user.user_id}
-        )
-
-        user.jwt_reload = new_refresh_token
-        await db.commit()
-
-        return TokenResponse(
-            access_token=access_token,
-            refresh_token=new_refresh_token
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
