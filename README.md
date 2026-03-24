@@ -7,16 +7,20 @@ api/
 ├── .gitignore
 ├── alembic.ini                 # Конфиг Alembic
 ├── Dockerfile                  # Docker образ для продакшена
+├── deploy.sh                   # Скрипт быстрого деплоя
 ├── pytest.ini                  # Конфигурация pytest
 ├── migrate.py                  # Скрипт миграций с поддержкой окружений
 ├── requirements.txt            # Зависимости Python
 ├── README.md
+├── .github/
+│   └── workflows/
+│       └── deploy.yml          # CI/CD — автодеплой при пуше в main
 ├── app/
-│   ├── main.py                 # Точка входа FastAPI
+│   ├── main.py                 # Точка входа FastAPI + планировщик задач
 │   ├── database.py             # Подключение к БД (SQLAlchemy async)
 │   ├── core/
 │   │   ├── config.py           # Настройки приложения (pydantic-settings)
-│   │   └── security.py        # Хэширование паролей, JWT токены
+│   │   └── security.py         # Хэширование паролей, JWT токены
 │   ├── models/                 # Модели SQLAlchemy
 │   │   ├── user.py
 │   │   ├── email_verification.py
@@ -31,13 +35,16 @@ api/
 │   │   ├── user.py
 │   │   ├── email_verification.py
 │   │   └── registration.py
-│   ├── api/
-│   │   └── auth.py             # Эндпоинты авторизации
-│   │   └── goals.py             # Эндпоинты целей регистрации
-│   │   └── roles.py             # Эндпоинты для ролей пользователя
+│   ├── api/                    # Эндпоинты
+│   │   ├── auth.py             # Регистрация, верификация, логин
+│   │   ├── roles.py            # Роли пользователей
+│   │   ├── goals.py            # Цели регистрации
+│   │   ├── password.py         # Сброс пароля
+│   │   └── user_info.py        # Информация о пользователе
 │   ├── services/
 │   │   ├── auth.py             # Бизнес-логика авторизации
-│   │   └── email.py            # Отправка email
+│   │   ├── email.py            # Отправка email
+│   │   └── cleanup.py          # Автоудаление неподтверждённых пользователей
 │   └── migrations/             # Миграции Alembic
 │       ├── env.py
 │       ├── script.py.mako
@@ -86,25 +93,54 @@ docker run -d --name smarttracker-api --env-file ~/api/.env -p 8000:8000 smarttr
 ### Просмотр логов
 ```
 # последние логи
-docker logs smarttracker-api
+docker logs smarttracker-api --tail 50
 
 # постоянные логи
 docker logs smarttracker-api -f
 ```
 
+## Фоновые задачи
+
+При запуске приложения автоматически стартует планировщик (APScheduler), который каждый час удаляет неподтверждённых пользователей старше 24 часов.
+
 ## Эндпоинты
 
+### Авторизация (`/auth`)
 | Метод | URL | Описание |
 |-------|-----|----------|
 | POST | /auth/register | Регистрация пользователя |
 | POST | /auth/verify-email | Подтверждение email |
-| POST | /auth/resend-code | Повторная отправка кода |
+| POST | /auth/resend-code | Повторная отправка кода верификации |
 | POST | /auth/login | Вход в систему |
 | POST | /auth/refresh | Обновление токенов |
 | POST | /auth/check-nickname | Проверка доступности никнейма |
-| GET | /role/ | Доступные роли |
-| GET | /role/user_roles | Получение ролей пользователя по его почте |
-| GET | /goal/ | Цели регистрации |
+
+### Сброс пароля (`/password-reset`)
+| Метод | URL | Описание |
+|-------|-----|----------|
+| POST | /password-reset/request | Запрос кода сброса пароля |
+| POST | /password-reset/verify-code | Проверка кода |
+| POST | /password-reset/resend-verify-code | Повторная отправка кода |
+| POST | /password-reset/confirm | Смена пароля |
+
+### Пользователь (`/user`)
+| Метод | URL | Описание |
+|-------|-----|----------|
+| GET | /user/ | Получение информации о пользователе |
+| PATCH | /user/ | Обновление информации о пользователе |
+| DELETE | /user/ | Удаление пользователя |
+
+### Роли (`/roles`)
+| Метод | URL | Описание |
+|-------|-----|----------|
+| GET | /roles/ | Список всех ролей |
+| GET | /roles/user_roles | Роли пользователя по email |
+
+### Цели регистрации (`/goal`)
+| Метод | URL | Описание |
+|-------|-----|----------|
+| GET | /goal/ | Список целей регистрации |
+
 ## Тестирование
 ```bash
 pytest tests/ -v
