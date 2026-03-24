@@ -127,7 +127,7 @@ class AuthService:
             )
             .order_by(EmailVerification.created_at.desc())
         )
-        verification = verification.scalar_one_or_none()
+        verification = verification.scalars().first()
         
         if not verification:
             raise ValueError("Не найден активный код подтверждения или срок его действия истек")
@@ -158,8 +158,10 @@ class AuthService:
         )
         user = user.scalar_one_or_none()
         
-        if not user or not user.is_active:
-            return # не выдаём информацию о существовании пользователя
+        if not user:
+            raise ValueError("Нет такого пользователя")
+        if user.is_active:
+            raise ValueError("Пользователь уже подтвержден")
         
         last_verification = await db.execute(
             select(EmailVerification)
@@ -190,8 +192,10 @@ class AuthService:
         )
         user = user.scalar_one_or_none()
         
-        if not user or not user.is_active:
-            return # не выдаём информацию о существовании пользователя
+        if not user:
+            raise ValueError("Нет такого пользователя")
+        if user.is_active:
+            raise ValueError("Пользователь уже подтвержден")
         
         verification_code = generate_verification_code(settings.VERIFICATION_CODE_LENGTH)
         
@@ -212,7 +216,7 @@ class AuthService:
         
         await db.commit()
         
-        expires_in = int((expires_at - datetime.now()).total_seconds())
+        expires_in = int((expires_at - datetime.now(timezone.utc)).total_seconds())
         
         return verification_code, expires_in
     
