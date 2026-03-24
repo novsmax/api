@@ -22,11 +22,10 @@ async def request_password_reset(
     request: PasswordResetRequest,
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    Запрос сброса пароля
-    """
-
-    await auth_service.request_password_reset(db, request.email)
+    try:
+        await auth_service.request_password_reset(db, request.email)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     
     return {"message": "Если email существует и подтверждён — код отправлен"}
 

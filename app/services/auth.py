@@ -249,7 +249,7 @@ class AuthService:
         user = user.scalar_one_or_none()
         
         if not user or not user.is_active:
-            return # не выдаём информацию о существовании пользователя
+            raise ValueError(f"Ошибка почты")
 
         verification_code = generate_verification_code(settings.VERIFICATION_CODE_LENGTH)
         code_hash = get_password_hash(verification_code)
@@ -265,7 +265,6 @@ class AuthService:
             raise ValueError(f"Не удалось отправить письмо: {str(e)}")
 
         await db.commit()
-        # всегда Труe, чтобы не выдавать информацию о существовании email
 
     async def verify_code_password(self, db: AsyncSession, email: str, verification_code: str) -> Tuple[bool]:
         "проверка кода"
@@ -275,7 +274,7 @@ class AuthService:
         user = user_result.scalar_one_or_none()
 
         if not user or not user.is_active:
-            return # не выдаём информацию о существовании пользователя
+            raise ValueError(f"Ошибка почты")
 
         if not user.password_reset_token_hash or not user.password_reset_token_expires_at:
             raise ValueError("Неверный код или срок его действия истёк")
@@ -297,7 +296,7 @@ class AuthService:
         user = user.scalar_one_or_none()
         
         if not user or not user.is_active:
-            return # не выдаём информацию о существовании пользователя
+            raise ValueError(f"Ошибка почты")
 
         if user.password_reset_token_expires_at:
             full_expire = timedelta(minutes=settings.VERIFICATION_CODE_EXPIRE_MINUTES_PASSWORD_RESET)
@@ -332,7 +331,7 @@ class AuthService:
         user = user_result.scalar_one_or_none()
         
         if not user or not user.is_active:
-            return # не выдаём информацию о существовании пользователя
+            raise ValueError("Ошибка почты")
 
         if not await  self.verify_code_password(db, email, verification_code):
             raise ValueError("Неверный код или срок его действия истёк")
