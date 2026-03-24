@@ -112,7 +112,7 @@ class AuthService:
         user = user.scalar_one_or_none()
         
         if not user:
-            return
+            raise ValueError("Нет такого ользователя")
         if user.is_active:
             raise ValueError("Пользователь уже подтвержден")
         
@@ -249,7 +249,7 @@ class AuthService:
         user = user.scalar_one_or_none()
         
         if not user or not user.is_active:
-            raise ValueError(f"Ошибка почты")
+            raise ValueError("Неправильная почта или пользователь не подтвержден")
 
         verification_code = generate_verification_code(settings.VERIFICATION_CODE_LENGTH)
         code_hash = get_password_hash(verification_code)
@@ -274,7 +274,7 @@ class AuthService:
         user = user_result.scalar_one_or_none()
 
         if not user or not user.is_active:
-            raise ValueError(f"Ошибка почты")
+            raise ValueError("Неправильная почта или пользователь не подтвержден")
 
         if not user.password_reset_token_hash or not user.password_reset_token_expires_at:
             raise ValueError("Неверный код или срок его действия истёк")
@@ -296,7 +296,7 @@ class AuthService:
         user = user.scalar_one_or_none()
         
         if not user or not user.is_active:
-            raise ValueError(f"Ошибка почты")
+            raise ValueError("Неправильная почта или пользователь не подтвержден")
 
         if user.password_reset_token_expires_at:
             full_expire = timedelta(minutes=settings.VERIFICATION_CODE_EXPIRE_MINUTES_PASSWORD_RESET)
@@ -331,7 +331,7 @@ class AuthService:
         user = user_result.scalar_one_or_none()
         
         if not user or not user.is_active:
-            raise ValueError("Ошибка почты")
+            raise ValueError("Неправильная почта или пользователь не подтвержден")
 
         if not await  self.verify_code_password(db, email, verification_code):
             raise ValueError("Неверный код или срок его действия истёк")

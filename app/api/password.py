@@ -17,7 +17,7 @@ router = APIRouter(prefix="/password-reset", tags=["password"])
 
 @router.post("/request",
     summary="Запрос кода для сброса пароля",
-    description="Отправляется код для сброса на указанную почту",)
+    description="Отправляется код для сброса на указанную почту")
 async def request_password_reset(
     request: PasswordResetRequest,
     db: AsyncSession = Depends(get_db)

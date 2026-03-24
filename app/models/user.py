@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, Float, Date, Boolean, DateTime
 from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
 from app.database import Base
 
 class User(Base):
@@ -23,3 +24,9 @@ class User(Base):
     is_active = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    email_verifications = relationship("EmailVerification", cascade="all, delete-orphan", back_populates="user")
+    user_goals = relationship("UserAndGoal", cascade="all, delete-orphan", back_populates="user")
+    user_roles = relationship("UserAndRole", cascade="all, delete-orphan", back_populates="user")
+    trainer_profile = relationship("Trainer", cascade="all, delete-orphan", back_populates="user")
+    club_organizer_profile = relationship("ClubOrganizer", cascade="all, delete-orphan", back_populates="user")

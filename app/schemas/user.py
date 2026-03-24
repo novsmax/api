@@ -41,3 +41,26 @@ class NicknameCheckResponse(BaseModel):
     nickname: str
     is_available: bool
     message: str
+
+class GetUserInfo(BaseModel):
+    first_name: str
+    last_name: Optional[str]
+    middle_name: Optional[str]
+    birth_date: date
+    weight: Optional[float]
+    height: Optional[float]
+    gender: str
+    nickname: str
+
+    class Config:
+        from_attributes = True
+
+class EditUserInfoRequest(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    middle_name: Optional[str] = None
+    birth_date: Optional[date] = None
+    weight: Optional[float] = None
+    height: Optional[float] = None
+    gender: Optional[str] = None
+    nickname: Optional[str] = None

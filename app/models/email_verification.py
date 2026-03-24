@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey
 from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
 from app.database import Base
 
 class EmailVerification(Base):
@@ -12,6 +13,8 @@ class EmailVerification(Base):
     expires_at = Column(DateTime(timezone=True), nullable=False)
     verified_at = Column(DateTime(timezone=True), nullable=True)
     attempts = Column(Integer, default=0)
+
+    user = relationship("User", back_populates="email_verifications")
     
     def is_expired(self):
         from datetime import datetime
