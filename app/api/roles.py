@@ -8,6 +8,7 @@ from app.models.user import User
 from app.models.user_and_role import UserAndRole
 
 from app.schemas.registration import RoleResponse
+from app.core.dependencies import get_current_user
 
 router = APIRouter(prefix="/role", tags=["roles"])
 
@@ -24,26 +25,18 @@ async def roles(db: AsyncSession = Depends(get_db)):
     return roles
 
 @router.get("/user_roles", 
-    summary="Поулчение роли пользователя по его email",
+    summary="Поулчение роли пользователя",
     response_model=list[RoleResponse])
 async def user_roles(
-        email: str,
+        current_user: User = Depends(get_current_user),
         db: AsyncSession = Depends(get_db)
     ):
 
     try:
-        user_result = await db.execute(
-            select(User).where(User.email == email)
-        )
-        user = user_result.scalar_one_or_none()
-
-        if not user:
-            raise HTTPException(status_code=404, detail="Пользователь не найден")
-
         result = await db.execute(
             select(Roles)
             .join(UserAndRole, Roles.role_id == UserAndRole.role_id)
-            .where(UserAndRole.user_id == user.user_id)
+            .where(UserAndRole.user_id == current_user.user_id)
         )
         roles = result.scalars().all()
     except ValueError as e:

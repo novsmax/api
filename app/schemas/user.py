@@ -49,7 +49,7 @@ class GetUserInfo(BaseModel):
     birth_date: date
     weight: Optional[float]
     height: Optional[float]
-    gender: str
+    gender: str = Field(..., pattern="^(male|female)$")
     nickname: str
 
     class Config:
@@ -62,5 +62,5 @@ class EditUserInfoRequest(BaseModel):
     birth_date: Optional[date] = None
     weight: Optional[float] = None
     height: Optional[float] = None
-    gender: Optional[str] = None
+    gender: Optional[str] = Field(default=None, pattern="^(male|female)$")
     nickname: Optional[str] = None
