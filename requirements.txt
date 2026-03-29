@@ -16,3 +16,4 @@ pytest-asyncio
 httpx
 aiosqlite
 apscheduler
+cassandra-driver
