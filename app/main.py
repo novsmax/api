@@ -1,3 +1,4 @@
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -5,7 +6,9 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from app.api import auth, roles, goals, password, user_info
 from app.services.cleanup import delete_unverified_users
+from app.services.cassandra import cassandra_service
 
+logger = logging.getLogger("uvicorn")
 scheduler = AsyncIOScheduler()
 
 @asynccontextmanager
@@ -14,17 +17,29 @@ async def lifespan(app: FastAPI):
     scheduler.add_job(
         delete_unverified_users,
         trigger="interval",
-        hours=1,  # запускать каждый час
+        hours=1,
         id="cleanup_unverified_users"
     )
     scheduler.start()
-    print("[Scheduler] Запущен")
+    logger.info("[Scheduler] Запущен")
+
+    # Подключение к Cassandra
+    try:
+        cassandra_service.connect()
+        logger.info("[Cassandra] Подключение установлено")
+    except Exception as e:
+        logger.error(f"[Cassandra] Ошибка подключения: {e}")
+
     yield
+
     # Остановка при выключении
     scheduler.shutdown()
-    print("[Scheduler] Остановлен")
+    logger.info("[Scheduler] Остановлен")
+    cassandra_service.close()
+    logger.info("[Cassandra] Подключение закрыто")
 
 app = FastAPI(
+    lifespan=lifespan,
     title="Smart Tracker API",
     version="1.0.0"
 )
