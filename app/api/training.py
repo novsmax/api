@@ -18,4 +18,9 @@ async def get_goals(db: AsyncSession = Depends(get_db)):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+    for item in types_activity:
+        if item.image_path:
+            item.image_path = f"https://runtastic.gottland.ru/static/icons/{item.image_path}"
+        else:
+            item.image_path = f"https://runtastic.gottland.ru/static/icons/placeholder.png"
     return types_activity

@@ -12,7 +12,6 @@ from app.services.cassandra import cassandra_service
 
 logger = logging.getLogger("uvicorn")
 scheduler = AsyncIOScheduler()
-app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -61,6 +60,8 @@ app.include_router(goals.router)
 app.include_router(password.router)
 app.include_router(user_info.router)
 app.include_router(training.router)
+
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 @app.get("/")
 async def root():
