@@ -3,13 +3,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from fastapi.staticfiles import StaticFiles
 
-from app.api import auth, roles, goals, password, user_info
+
+from app.api import auth, roles, goals, password, user_info, training
 from app.services.cleanup import delete_unverified_users
 from app.services.cassandra import cassandra_service
 
 logger = logging.getLogger("uvicorn")
 scheduler = AsyncIOScheduler()
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -57,6 +60,7 @@ app.include_router(roles.router)
 app.include_router(goals.router)
 app.include_router(password.router)
 app.include_router(user_info.router)
+app.include_router(training.router)
 
 @app.get("/")
 async def root():
