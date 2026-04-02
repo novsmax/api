@@ -26,8 +26,10 @@ async def get_current_user(
         if not email:
             raise HTTPException(status_code=401, detail="Неверный токен")
             
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Неверный или просроченный токен")
+    except JWTError as e:
+        if "expired" in str(e).lower():
+            raise HTTPException(status_code=401, detail="Токен просрочен")
+        raise HTTPException(status_code=401, detail="Неверный токен")
     
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()

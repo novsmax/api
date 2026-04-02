@@ -17,6 +17,8 @@ def get_password_hash(password: str) -> str:
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
+    if "user_id" in to_encode and not isinstance(to_encode["user_id"], str):
+        to_encode["user_id"] = str(to_encode["user_id"])
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
@@ -28,6 +30,8 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
 
 def create_refresh_token(data: dict) -> str:
     to_encode = data.copy()
+    if "user_id" in to_encode and not isinstance(to_encode["user_id"], str):
+        to_encode["user_id"] = str(to_encode["user_id"])
     expire = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     to_encode.update({"exp": expire, "type": "refresh"})
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)

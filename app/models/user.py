@@ -1,12 +1,14 @@
-from sqlalchemy import Column, Integer, String, Float, Date, Boolean, DateTime
-from sqlalchemy.sql import func
+from sqlalchemy import Column, String, Float, Date, Boolean, DateTime
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 from app.database import Base
+import uuid
 
 class User(Base):
     __tablename__ = "users"
 
-    user_id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     first_name = Column(String(100), nullable=False)
     last_name = Column(String(100), nullable=True)    
     middle_name = Column(String(100), nullable=True)  

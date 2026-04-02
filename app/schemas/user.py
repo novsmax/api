@@ -1,6 +1,7 @@
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, Field, EmailStr, field_validator
+from typing import Optional, List
 from datetime import date, datetime
-from typing import List, Optional
+from uuid import UUID
 
 class UserBase(BaseModel):
     first_name: str = Field(..., min_length=1, max_length=100)
@@ -23,7 +24,7 @@ class UserCreate(UserBase):
     
 
 class UserResponse(UserBase):
-    user_id: int
+    user_id: UUID
     is_active: bool = False
     created_at: Optional[datetime]
     
