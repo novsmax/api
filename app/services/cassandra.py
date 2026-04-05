@@ -65,7 +65,7 @@ class CassandraService:
                 """,
                 (
                     active_training_id,
-                    point['timestamp'],
+                    point['recorded_at'],
                     point['latitude'],
                     point['longitude'],
                     point.get("accuracy"),
@@ -74,5 +74,39 @@ class CassandraService:
                     batch_id
                 )
             )
+
+    def check_batch_exists(self, active_training_id: uuid.UUID, batch_id: uuid.UUID) -> bool:
+        rows = self.session.execute(
+            """
+            SELECT recorded_at FROM gps_points 
+            WHERE active_training_id = %s AND batch_id = %s 
+            LIMIT 1 ALLOW FILTERING
+            """,
+            (active_training_id, batch_id)
+        )
+
+        if rows.one() is not None:
+            return True
+        else:
+            return False   
+
+    def get_gps_points(self, active_training_id: uuid.UUID):
+        rows = self.session.execute(
+            "SELECT * FROM gps_points WHERE active_training_id = %s",
+            (active_training_id,)
+        )
+
+        if rows:
+            return rows.all()
+        else:
+            return []
+    
+    def delete_gps_points(self, active_training_id: uuid.UUID):
+        self.session.execute(
+            "DELETE FROM gps_points WHERE active_training_id = %s",
+            (active_training_id,)
+        )
+
+         
 
 cassandra_service = CassandraService()

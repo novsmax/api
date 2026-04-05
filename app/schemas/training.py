@@ -1,5 +1,5 @@
-from pydantic import BaseModel
-from typing import Optional
+from pydantic import BaseModel, Field
+from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
 
@@ -20,9 +20,6 @@ class StartTrainingResponce(BaseModel):
 class StartTrainingRequest(BaseModel):
     type_activ_id: int
 
-class DeleteTrainingRequest(BaseModel):
-    active_training_id: UUID
-
 class GetActiveTrainingResponse(BaseModel):
     active_training_id: UUID
     type_activ_id: int
@@ -31,3 +28,28 @@ class GetActiveTrainingResponse(BaseModel):
     training_time: int
     is_pause: bool
     kilocalories: float
+
+class GPSPoints(BaseModel):
+    recorded_at: datetime
+    latitude: float
+    longitude: float
+    accuracy: Optional[float] = None
+    altitude: Optional[float] = None
+    speed: Optional[float] = None
+
+class SendGPSPointsResponce(BaseModel):
+    saved: int
+    message: str = "Точки сохранены"
+
+class SendGPSPointsRequest(BaseModel):
+    batch_id: UUID
+    points: List[GPSPoints] = Field(..., min_length=1, max_length=100)
+
+class SaveTrainigResponce(BaseModel):
+    training_id: UUID
+    message: str = "Тренировка завершена"
+
+class SaveTrainigRequest(BaseModel):
+    time_end: datetime
+    total_distance_meters: Optional[float] = None
+    total_kilocalories: Optional[float] = None
