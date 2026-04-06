@@ -19,7 +19,9 @@ from app.schemas.training import (
     SendGPSPointsRequest,
     SendGPSPointsResponce,
     SaveTrainigResponce,
-    SaveTrainigRequest)
+    SaveTrainigRequest,
+    GPSPoints,
+    GetCompleteTrainingResponce)
 
 router = APIRouter(prefix="/training", tags=["training"])
 
@@ -147,7 +149,7 @@ async def send_gps_pints(
 
 @router.post("/{training_id}/save_training",
     summary = "Завершить тренировку",
-    description="Переносит все данные на сохранение в постгрес и удалет из касандры",
+    description="Переносит все данные на сохранение в постгрес и удалет из касандры активную тренировку",
     response_model = SaveTrainigResponce
 )
 async def save_active_training(
@@ -175,12 +177,56 @@ async def save_active_training(
             gps_points=gps_points
         )
         
-        cassandra_service.delete_gps_points(training_id)
+        #cassandra_service.delete_gps_points(training_id)
         cassandra_service.delete_training(current_user.user_id, training_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
     return SaveTrainigResponce(training_id=training_id)
+
+@router.get("/{training_id}/get_training", 
+    summary="Получить данные завершённой тренировки",
+    description="Метаданные из постгрес, gps точки из касандры",
+    response_model=GetCompleteTrainingResponce)
+async def get_complete_training(
+    training_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    active = cassandra_service.get_active_training(current_user.user_id)
+    if active and active.active_training_id == training_id:
+        raise HTTPException(status_code=400, detail="Тренировка ещё не завершена")
+
+    training = await training_service.get_complete_training(db, training_id)
+    if not training:
+        raise HTTPException(status_code=404, detail="Тренировка не найдена")
+
+    if training.user_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Нет доступа к этой тренировке")
+
+    try:
+        gps_points = cassandra_service.get_gps_points(training_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return GetCompleteTrainingResponce(
+        training_id=training.training_id,
+        type_activ_id=training.type_activ_id,
+        date=str(training.date),
+        time_start=training.time_start,
+        time_end=training.time_end,
+        kilocalories=training.kilocalories,
+        points=[
+            GPSPoints(
+                recorded_at=p.recorded_at,
+                latitude=p.latitude,
+                longitude=p.longitude,
+                altitude=p.altitude,
+                speed=p.speed,
+                accuracy=p.accuracy
+            ) for p in gps_points
+        ]
+    ) 
 
 @router.get("/types_activity", 
     summary="Виды активности",

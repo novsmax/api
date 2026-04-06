@@ -6,6 +6,7 @@ from datetime import date as date_type, datetime
 
 from app.models.completed_training import CompletedTraining
 from app.models.training_gps_points import TrainingGPSPoints
+from app.models.completed_training import CompletedTraining
 
 class TrainingService:
 
@@ -13,7 +14,7 @@ class TrainingService:
         self,
         db: AsyncSession,
         training_id: UUID,
-        user_id: int,
+        user_id: UUID,
         type_activ_id: int,
         date,
         time_start,
@@ -38,18 +39,26 @@ class TrainingService:
 
         db.add(complete)
         
-        for point in gps_points:
-            gps_record = TrainingGPSPoints(
-                    training_id=training_id,
-                    recorded_at=point.recorded_at,
-                    latitude=point.latitude,
-                    longitude=point.longitude,
-                    altitude=point.altitude,
-                    speed=point.speed,
-                    accuracy=point.accuracy
-                )
-            db.add(gps_record)
+        # for point in gps_points:
+        #     gps_record = TrainingGPSPoints(
+        #             training_id=training_id,
+        #             recorded_at=point.recorded_at,
+        #             latitude=point.latitude,
+        #             longitude=point.longitude,
+        #             altitude=point.altitude,
+        #             speed=point.speed,
+        #             accuracy=point.accuracy
+        #         )
+        #     db.add(gps_record)
         
         await db.commit()
+
+    async def get_complete_training(self, db: AsyncSession, training_id: UUID):
+        result = await db.execute(
+            select(CompletedTraining).where(CompletedTraining.training_id == training_id)
+        )
+        data_complete_training = result.scalar_one_or_none()
+
+        return data_complete_training
 
 training_service = TrainingService()

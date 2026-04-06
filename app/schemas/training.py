@@ -53,3 +53,12 @@ class SaveTrainigRequest(BaseModel):
     time_end: datetime
     total_distance_meters: Optional[float] = None
     total_kilocalories: Optional[float] = None
+
+class GetCompleteTrainingResponce(BaseModel):
+    training_id: UUID
+    type_activ_id: int
+    date: str
+    time_start: datetime
+    time_end: Optional[datetime] = None
+    kilocalories: Optional[float] = None
+    points: List[GPSPoints] = []
