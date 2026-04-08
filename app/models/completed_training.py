@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, Float, Date, DateTime, Text, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
+from geoalchemy2 import Geometry
 from app.database import Base
 import uuid
 
@@ -14,3 +15,4 @@ class CompletedTraining(Base):
     time_end = Column(DateTime(timezone=True), nullable=True)
     data_training = Column(Text, nullable=True)
     kilocalories = Column(Float, nullable=True)
+    gps_track = Column(Geometry(geometry_type='LINESTRING', srid=4326, dimension=3), nullable=True)

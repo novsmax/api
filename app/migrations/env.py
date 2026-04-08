@@ -5,6 +5,7 @@ from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 from dotenv import load_dotenv
+import geoalchemy2
 
 load_dotenv()
 
@@ -27,7 +28,6 @@ from app.database import Base
 from app.models.clubs import Club
 from app.models.activity_types import ActivityType
 from app.models.completed_training import CompletedTraining
-from app.models.training_gps_points import TrainingGPSPoints
 
 target_metadata = Base.metadata
 
@@ -38,12 +38,13 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        include_object=include_object,
     )
     with context.begin_transaction():
         context.run_migrations()
 
 def do_run_migrations(connection):
-    context.configure(connection=connection, target_metadata=target_metadata)
+    context.configure(connection=connection, target_metadata=target_metadata, include_object=include_object,)
     with context.begin_transaction():
         context.run_migrations()
 
@@ -55,6 +56,16 @@ async def run_migrations_online() -> None:
     )
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)
+
+def include_object(object, name, type_, reflected, compare_to):
+    # Игнорируем системные таблицы PostGIS
+    postgis_tables = {
+        'spatial_ref_sys', 'geometry_columns', 'geography_columns',
+        'raster_columns', 'raster_overviews'
+    }
+    if type_ == "table" and name in postgis_tables:
+        return False
+    return True
 
 if context.is_offline_mode():
     run_migrations_offline()

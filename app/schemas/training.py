@@ -60,4 +60,4 @@ class GetCompleteTrainingResponce(BaseModel):
     time_start: datetime
     time_end: Optional[datetime] = None
     kilocalories: Optional[float] = None
-    points: List[GPSPoints] = []
+    gps_track: Optional[dict] = None

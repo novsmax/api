@@ -187,7 +187,7 @@ async def save_active_training(
     summary="Получить данные завершённой тренировки",
     description="Метаданные из постгрес, gps точки из касандры",
     response_model=GetCompleteTrainingResponce)
-async def get_complete_training(
+async def complete_training(
     training_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -203,11 +203,6 @@ async def get_complete_training(
     if training.user_id != current_user.user_id:
         raise HTTPException(status_code=403, detail="Нет доступа к этой тренировке")
 
-    try:
-        gps_points = cassandra_service.get_gps_points(training_id)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
     return GetCompleteTrainingResponce(
         training_id=training.training_id,
         type_activ_id=training.type_activ_id,
@@ -215,17 +210,8 @@ async def get_complete_training(
         time_start=training.time_start,
         time_end=training.time_end,
         kilocalories=training.kilocalories,
-        points=[
-            GPSPoints(
-                recorded_at=p.recorded_at,
-                latitude=p.latitude,
-                longitude=p.longitude,
-                altitude=p.altitude,
-                speed=p.speed,
-                accuracy=p.accuracy
-            ) for p in gps_points
-        ]
-    ) 
+        gps_track=training.gps_geojson
+        )
 
 @router.get("/types_activity", 
     summary="Виды активности",
