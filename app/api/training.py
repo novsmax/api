@@ -80,7 +80,6 @@ async def get_active_training(
         date=str(active_training.date),
         time_start=active_training.time_start,
         training_time=active_training.training_time,
-        is_pause=active_training.is_pause,
         kilocalories=active_training.kilocalories
     )
 
