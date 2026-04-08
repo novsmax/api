@@ -33,12 +33,12 @@ class CassandraService:
     # тренировки
     def start_training(self, user_id: uuid.UUID, active_training_id: uuid.UUID, type_activ_id: int):
         self.session.execute(
-        """
-            INSERT into active_training(user_id, active_training_id, type_activ_id, date, 
-                time_start, training_time, is_pause, data_training, kilocalories)
-            VALUES (%s, %s, %s, toDate(now()), toTimestamp(now()), 0, false, %s, 0.0)
-        """,
-        (user_id, active_training_id, type_activ_id, '{}')
+            """
+                INSERT INTO active_training(user_id, active_training_id, type_activ_id, date, 
+                    time_start, training_time, data_training, kilocalories)
+                VALUES (%s, %s, %s, toDate(now()), toTimestamp(now()), 0, %s, 0.0)
+            """,
+            (user_id, active_training_id, type_activ_id, '{}')
         )
 
     def get_active_training(self, user_id: uuid.UUID):

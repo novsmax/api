@@ -26,7 +26,6 @@ class GetActiveTrainingResponse(BaseModel):
     date: str
     time_start: datetime
     training_time: int
-    is_pause: bool
     kilocalories: float
 
 class GPSPoints(BaseModel):
