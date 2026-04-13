@@ -35,6 +35,7 @@ class GPSPoints(BaseModel):
     accuracy: Optional[float] = None
     altitude: Optional[float] = None
     speed: Optional[float] = None
+    calories: Optional[float] = None
 
 class SendGPSPointsResponce(BaseModel):
     saved: int
@@ -61,3 +62,21 @@ class GetCompleteTrainingResponce(BaseModel):
     time_end: Optional[datetime] = None
     kilocalories: Optional[float] = None
     gps_track: Optional[dict] = None
+
+class MetZoneResponse(BaseModel):
+    speed_min: Optional[float]
+    speed_max: Optional[float]
+    met_value: float
+
+    class Config:
+        from_attributes = True
+
+
+class METActivityResponce(BaseModel):
+    type_activ_id: int
+    base_met: float
+    uses_speed_zones: bool
+    zones: list[MetZoneResponse] = []
+
+    class Config:
+        from_attributes = True

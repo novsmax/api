@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from datetime import datetime, timezone, date
 import uuid
 
@@ -11,6 +12,8 @@ from app.core.dependencies import get_current_user
 
 from app.database import get_db
 from app.models.activity_types import ActivityType
+from app.models.activity_met_info import ActivityMetInfo
+from app.models.activity_met_zone import ActivityMetZone
 from app.schemas.training import (
     TypeAcrivity, 
     StartTrainingResponce, 
@@ -21,7 +24,8 @@ from app.schemas.training import (
     SaveTrainigResponce,
     SaveTrainigRequest,
     GPSPoints,
-    GetCompleteTrainingResponce)
+    GetCompleteTrainingResponce,
+    METActivityResponce)
 
 router = APIRouter(prefix="/training", tags=["training"])
 
@@ -130,7 +134,8 @@ async def send_gps_pints(
             "longitude": point.longitude,
             "accuracy": point.accuracy,
             "altitude": point.altitude,
-            "speed": point.speed
+            "speed": point.speed,
+            "calories": point.calories,
         }
         for point in request.points
     ]
@@ -229,3 +234,26 @@ async def get_goals(db: AsyncSession = Depends(get_db)):
         else:
             item.image_path = f"https://runtastic.gottland.ru/static/icons/placeholder.png"
     return types_activity
+
+
+@router.get("/met/{type_activ_id}", 
+    summary="MET данные для подсчета калорий",
+    response_model=METActivityResponce)
+async def get_met_activity(
+    type_activ_id: int,
+    db: AsyncSession = Depends(get_db)
+    ):
+    try:
+        result = await db.execute(
+            select(ActivityMetInfo)
+            .options(selectinload(ActivityMetInfo.zones))
+            .where(ActivityMetInfo.type_activ_id == type_activ_id)
+        )
+        met_info = result.scalar_one_or_none()
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    if not met_info:
+        raise HTTPException(status_code=404, detail="MET данных для этого вида спорта нет")
+
+    return met_info

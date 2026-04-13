@@ -60,8 +60,8 @@ class CassandraService:
             self.session.execute(
                 """
                 INSERT into gps_points(active_training_id, recorded_at, latitude, longitude, 
-                    accuracy, altitude, speed, batch_id)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    accuracy, altitude, speed, batch_id, calories)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     active_training_id,
@@ -71,7 +71,8 @@ class CassandraService:
                     point.get("accuracy"),
                     point.get("altitude"),
                     point.get("speed"),
-                    batch_id
+                    batch_id,
+                    point.get('calories')
                 )
             )
 
