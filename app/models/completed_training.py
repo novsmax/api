@@ -16,3 +16,5 @@ class CompletedTraining(Base):
     data_training = Column(Text, nullable=True)
     kilocalories = Column(Float, nullable=True)
     gps_track = Column(Geometry(geometry_type='LINESTRING', srid=4326, dimension=3), nullable=True)
+    distance_m = Column(Float, nullable=True)
+    avg_speed = Column(Float, nullable=True)

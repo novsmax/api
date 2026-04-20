@@ -54,6 +54,10 @@ class SaveTrainigRequest(BaseModel):
     total_distance_meters: Optional[float] = None
     total_kilocalories: Optional[float] = None
 
+class CaloriesPoint(BaseModel):
+    recorded_at: datetime
+    calories: float
+
 class GetCompleteTrainingResponce(BaseModel):
     training_id: UUID
     type_activ_id: int
@@ -61,7 +65,10 @@ class GetCompleteTrainingResponce(BaseModel):
     time_start: datetime
     time_end: Optional[datetime] = None
     kilocalories: Optional[float] = None
+    distance_m: Optional[float] = None
+    avg_speed: Optional[float] = None
     gps_track: Optional[dict] = None
+    calories_points: list[CaloriesPoint] = []
 
 class MetZoneResponse(BaseModel):
     speed_min: Optional[float]
