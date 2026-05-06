@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, date
 
 class TypeAcrivity(BaseModel):
     type_activ_id: int
@@ -19,6 +19,7 @@ class StartTrainingResponce(BaseModel):
 
 class StartTrainingRequest(BaseModel):
     type_activ_id: int
+    time_start: Optional[datetime] = None
 
 class GetActiveTrainingResponse(BaseModel):
     active_training_id: UUID
@@ -84,6 +85,19 @@ class METActivityResponce(BaseModel):
     base_met: float
     uses_speed_zones: bool
     zones: list[MetZoneResponse] = []
+
+    class Config:
+        from_attributes = True
+
+class CompletedTrainingListItem(BaseModel):
+    training_id: UUID
+    type_activ_id: int
+    date: date
+    time_start: datetime
+    time_end: Optional[datetime]
+    kilocalories: Optional[float]
+    distance_m: Optional[float]
+    avg_speed: Optional[float]
 
     class Config:
         from_attributes = True

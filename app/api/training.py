@@ -11,6 +11,8 @@ from app.services.training_postgres import training_service
 from app.core.dependencies import get_current_user
 
 from app.database import get_db
+
+from app.models.completed_training import CompletedTraining
 from app.models.activity_types import ActivityType
 from app.models.activity_met_info import ActivityMetInfo
 from app.models.activity_met_zone import ActivityMetZone
@@ -25,7 +27,8 @@ from app.schemas.training import (
     SaveTrainigRequest,
     GPSPoints,
     GetCompleteTrainingResponce,
-    METActivityResponce)
+    METActivityResponce,
+    CompletedTrainingListItem)
 
 router = APIRouter(prefix="/training", tags=["training"])
 
@@ -45,11 +48,12 @@ async def start_trainig(
     if not activity.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Нет такого вида активности")
 
-    active_training_id_server = uuid.uuid4()    
-
     active_training = cassandra_service.get_active_training(current_user.user_id)
     if active_training:
         raise HTTPException(status_code=400, detail="У вас есть активная тренировка")
+
+    active_training_id_server = uuid.uuid4()    
+    actual_start = request.time_start or datetime.now(timezone.utc)
 
     try:
         cassandra_service.start_training(
@@ -63,8 +67,8 @@ async def start_trainig(
     return StartTrainingResponce(
         active_training_id=active_training_id_server,
         type_activ_id = request.type_activ_id,
-        time_start = datetime.now(timezone.utc)
-        )
+        time_start = actual_start
+    )
 
 @router.get("/active",
     summary = "Аткивная тренировка",
@@ -271,3 +275,18 @@ async def get_met_activity(
         raise HTTPException(status_code=404, detail="MET данных для этого вида спорта нет")
 
     return met_info
+
+@router.get("/history",
+    summary="История тренировок пользователя",
+    response_model=list[CompletedTrainingListItem])
+async def get_training_history(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(
+        select(CompletedTraining)
+        .where(CompletedTraining.user_id == current_user.user_id)
+        .order_by(CompletedTraining.date.desc(), CompletedTraining.time_start.desc())
+    )
+    trainings = result.scalars().all()
+    return trainings
