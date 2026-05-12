@@ -52,6 +52,7 @@ class GetUserInfo(BaseModel):
     height: Optional[float]
     gender: str = Field(..., pattern="^(male|female)$")
     nickname: str
+    image_path: Optional[str] = None
 
     class Config:
         from_attributes = True

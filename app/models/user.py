@@ -19,6 +19,7 @@ class User(Base):
     email = Column(String(255), nullable=False, unique=True)
     password = Column(String(255), nullable=False)
     nickname = Column(String(100), nullable=False, unique=True)
+    image_path = Column(String(500), nullable=True)
     jwt_session = Column(String(500), nullable=True)
     jwt_reload = Column(String(500), nullable=True)
     password_reset_token_hash = Column(String(255), nullable=True)
