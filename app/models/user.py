@@ -33,3 +33,4 @@ class User(Base):
     user_roles = relationship("UserAndRole", cascade="all, delete-orphan", back_populates="user")
     trainer_profile = relationship("Trainer", cascade="all, delete-orphan", back_populates="user")
     club_organizer_profile = relationship("ClubOrganizer", cascade="all, delete-orphan", back_populates="user")
+    completed_trainig_profile = relationship("CompletedTraining", cascade="all, delete-orphan", back_populates="user")

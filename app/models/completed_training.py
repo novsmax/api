@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, Float, Date, DateTime, Text, ForeignKey
+from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 from geoalchemy2 import Geometry
 from app.database import Base
@@ -18,3 +19,6 @@ class CompletedTraining(Base):
     gps_track = Column(Geometry(geometry_type='LINESTRING', srid=4326, dimension=3), nullable=True)
     distance_m = Column(Float, nullable=True)
     avg_speed = Column(Float, nullable=True)
+    elevation_gain = Column(Float, nullable=True)
+
+    user = relationship("User", back_populates="completed_trainig_profile")

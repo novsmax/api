@@ -213,8 +213,10 @@ async def complete_training(
         raise HTTPException(status_code=403, detail="Нет доступа к этой тренировке")
 
     calories_points = []
+    timestamps = []
     try:
         gps_points = cassandra_service.get_gps_points(training_id)
+        timestamps = [p.recorded_at for p in gps_points]
         calories_points = [
             {"recorded_at": p.recorded_at, "calories": p.calories}
             for p in gps_points
@@ -233,7 +235,9 @@ async def complete_training(
         distance_m=training.distance_m,
         avg_speed=training.avg_speed,
         gps_track=training.gps_geojson,
-        calories_points=calories_points
+        calories_points=calories_points,
+        elevation_gain=training.elevation_gain,
+        gps_points_timestamps=timestamps
     )
 
 @router.get("/types_activity", 
@@ -290,3 +294,23 @@ async def get_training_history(
     )
     trainings = result.scalars().all()
     return trainings
+
+@router.delete("/{training_id}/delete_completed",
+    summary="Удалить завершённую тренировку",
+    description="Удаляет завершённую тренировку из PostgreSQL")
+async def delete_completed_training(
+    training_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    training = await training_service.get_complete_training(db, training_id)
+    if not training:
+        raise HTTPException(status_code=404, detail="Тренировка не найдена")
+
+    if training.user_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Нет доступа к этой тренировке")
+
+    await db.delete(training)
+    await db.commit()
+
+    return {"message": "Тренировка удалена"}

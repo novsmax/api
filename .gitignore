@@ -4,3 +4,5 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+app/static/avatars/*
+!app/static/avatars/profile_placeholder.png

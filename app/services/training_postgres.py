@@ -50,6 +50,18 @@ class TrainingService:
             if len(coords) >= 2:
                 gps_track_wkt = f"LINESTRING({', '.join(coords)})"
 
+        elevation_gain = None
+        if gps_points:
+            gain = 0.0
+            sorted_pts = sorted(gps_points, key=lambda p: p.recorded_at)
+            for i in range(1, len(sorted_pts)):
+                prev_alt = sorted_pts[i-1].altitude or 0.0
+                curr_alt = sorted_pts[i].altitude or 0.0
+                diff = curr_alt - prev_alt
+                if diff > 0:
+                    gain += diff
+            elevation_gain = round(gain, 2)
+
         complete = CompletedTraining(
             training_id = training_id,
             user_id = user_id,
@@ -60,7 +72,8 @@ class TrainingService:
             kilocalories = total_calories,
             avg_speed=avg_speed,
             data_training = None,
-            gps_track=text(f"ST_GeomFromText('{gps_track_wkt}', 4326)") if gps_track_wkt else None
+            gps_track=text(f"ST_GeomFromText('{gps_track_wkt}', 4326)") if gps_track_wkt else None,
+            elevation_gain=elevation_gain
         )
 
         db.add(complete)

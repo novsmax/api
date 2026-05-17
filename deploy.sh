@@ -14,6 +14,7 @@ docker run -d \
   --env-file ~/api/.env \
   --dns 8.8.8.8 \
   -p 8000:8000 \
+  -v /home/mihail/api/app/static/avatars:/app/app/static/avatars \
   smarttracker-api
 
 echo "Логи:"

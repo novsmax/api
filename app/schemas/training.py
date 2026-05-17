@@ -70,6 +70,8 @@ class GetCompleteTrainingResponce(BaseModel):
     avg_speed: Optional[float] = None
     gps_track: Optional[dict] = None
     calories_points: list[CaloriesPoint] = []
+    elevation_gain: Optional[float] = None
+    gps_points_timestamps: list[datetime] = []
 
 class MetZoneResponse(BaseModel):
     speed_min: Optional[float]
@@ -98,6 +100,7 @@ class CompletedTrainingListItem(BaseModel):
     kilocalories: Optional[float]
     distance_m: Optional[float]
     avg_speed: Optional[float]
+    elevation_gain: Optional[float] = None
 
     class Config:
         from_attributes = True
