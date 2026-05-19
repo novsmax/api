@@ -4,6 +4,7 @@ from cassandra.query import SimpleStatement
 import uuid
 import os
 import logging
+from datetime import datetime, timezone, date as date_type
 
 logger = logging.getLogger(__name__)
 
@@ -31,14 +32,17 @@ class CassandraService:
             self.cluster.shutdown()
             logger.info("Подключение к Cassandra закрыто")
     # тренировки
-    def start_training(self, user_id: uuid.UUID, active_training_id: uuid.UUID, type_activ_id: int):
+    def start_training(self, user_id: uuid.UUID, active_training_id: uuid.UUID, type_activ_id: int, time_start=None):
+        actual_start = time_start if time_start else datetime.now(timezone.utc)
+        actual_date = actual_start.date() if hasattr(actual_start, 'date') else date_type.today()
+
         self.session.execute(
             """
-                INSERT INTO active_training(user_id, active_training_id, type_activ_id, date, 
-                    time_start, training_time, data_training, kilocalories)
-                VALUES (%s, %s, %s, toDate(now()), toTimestamp(now()), 0, %s, 0.0)
+            INSERT INTO active_training(user_id, active_training_id, type_activ_id, date, 
+                time_start, training_time, data_training, kilocalories)
+            VALUES (%s, %s, %s, %s, %s, 0, %s, 0.0)
             """,
-            (user_id, active_training_id, type_activ_id, '{}')
+            (user_id, active_training_id, type_activ_id, actual_date, actual_start, '{}')
         )
 
     def get_active_training(self, user_id: uuid.UUID):

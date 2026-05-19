@@ -64,17 +64,17 @@ async def delete_user(
 
     return {"message": "Пользователь удалён"}
 
-@router.post("/logout",
-    summary="Выход пользователя с аккаунта",
-    description="Выйти с аккаунта")
-async def logout(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
+# @router.post("/logout",
+#     summary="Выход пользователя с аккаунта",
+#     description="Выйти с аккаунта")
+# async def logout(
+#     current_user: User = Depends(get_current_user),
+#     db: AsyncSession = Depends(get_db)
+# ):
 
-    current_user.jwt_reload = None
-    await db.commit()
-    return {"message": "Выход выполнен"}
+#     current_user.jwt_reload = None
+#     await db.commit()
+#     return {"message": "Выход выполнен"}
 
 @router.post("/photo",
     summary="Загрузка фото профиля",

@@ -59,7 +59,8 @@ async def start_trainig(
         cassandra_service.start_training(
             user_id = current_user.user_id,
             active_training_id = active_training_id_server,
-            type_activ_id = request.type_activ_id
+            type_activ_id = request.type_activ_id,
+            time_start=actual_start
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -170,6 +171,13 @@ async def save_active_training(
     if not active_training or active_training.active_training_id != training_id:
         raise HTTPException(status_code=404, detail="Тренировка не найдена")
     
+    if request.time_end and active_training.time_start:
+        if request.time_end < active_training.time_start:
+            raise HTTPException(
+                status_code=400,
+                detail=f"time_end ({request.time_end}) не может быть раньше time_start ({active_training.time_start})"
+            )
+
     gps_points = cassandra_service.get_gps_points(training_id)
     
     try:

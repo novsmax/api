@@ -24,6 +24,7 @@ from app.schemas.email_verification import (
 from app.services.auth import auth_service
 from app.core.config import settings
 from app.core.security import create_access_token, create_refresh_token, verify_password
+from app.core.dependencies import get_current_user
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
@@ -212,3 +213,15 @@ async def check_nickname(
         is_available=is_available,
         message=message
     )
+
+@router.post("/logout",
+    summary="Выход пользователя с аккаунта",
+    description="Выйти с аккаунта")
+async def logout(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+
+    current_user.jwt_reload = None
+    await db.commit()
+    return {"message": "Выход выполнен"}
