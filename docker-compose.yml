@@ -1,18 +1,70 @@
-version: '3.8'
 
 services:
   postgres:
     image: postgres:15-alpine
-    container_name: smart_tracker_db
+    container_name: smart_tracker_postgres
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: smart_tracker
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5434:5432" 
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
 
+  cassandra:
+    image: cassandra:5
+    container_name: smart_tracker_cassandra
+
+    ports:
+      - "9042:9042"
+    volumes:
+      - cassandra_data:/var/lib/cassandra
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "cqlsh -e 'describe keyspaces' || exit 1" ]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  cassandra-init:
+    image: cassandra:5
+    command: ["cqlsh", "cassandra", "9042", "-f", "/init.cql"]
+    volumes:
+      - ./init.cql:/init.cql:ro
+    depends_on:
+      cassandra:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build: .
+    container_name: smart_tracker_api
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_started
+      cassandra-init:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+
+      SECRET_KEY: ${SECRET_KEY}
+
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      EMAIL_FROM: ${EMAIL_FROM}
+
+      CASSANDRA_HOST: cassandra
+      CASSANDRA_PORT: 9042
+      CASSANDRA_USER: smart_tracker
+      CASSANDRA_PASSWORD: smart_tracker
+
 volumes:
   postgres_data:
+  cassandra_data:
