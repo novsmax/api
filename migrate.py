@@ -33,7 +33,8 @@ SERVER_USER = os.getenv("SERVER_USER")
 SERVER_PASSWORD = os.getenv("SERVER_PASSWORD")
 LOCAL_PORT = int(os.getenv("POSTGRES_PORT", "5434"))
 REMOTE_HOST = "127.0.0.1"
-REMOTE_PORT = 5432
+# Порт Postgres на самом сервере: compose-стек публикует его на 5434
+REMOTE_PORT = int(os.getenv("REMOTE_DB_PORT", "5434"))
 
 DB_NAME = os.getenv("POSTGRES_DB", "smart_tracker")
 DB_USER = os.getenv("POSTGRES_USER", "smart_tracker_user")

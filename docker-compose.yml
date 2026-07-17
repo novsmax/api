@@ -8,7 +8,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "5434:5432" 
+      # только localhost: снаружи БД доступна через SSH-туннель (migrate.py)
+      - "127.0.0.1:5434:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -33,7 +34,8 @@ services:
     image: cassandra:5
     container_name: smart_tracker_cassandra
     ports:
-      - "9042:9042"
+      # только localhost: cassandra:5 без аутентификации, наружу не публикуем
+      - "127.0.0.1:9042:9042"
     volumes:
       - cassandra_data:/var/lib/cassandra
     restart: unless-stopped
@@ -59,6 +61,12 @@ services:
     container_name: smart_tracker_api
     ports:
       - "8000:8000"
+    dns:
+      - 8.8.8.8
+    volumes:
+      - ./app/static/avatars:/app/app/static/avatars
+    env_file:
+      - .env
     depends_on:
       postgres-migrate:
         condition: service_completed_successfully

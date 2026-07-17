@@ -82,11 +82,12 @@ python migrate.py --env prod history
 ```
 
 ### Пересборка после изменений
+Весь стек (Postgres, Cassandra, миграции, API) описан в `docker-compose.yml`:
 ```bash
-docker stop smarttracker-api && docker rm smarttracker-api
-docker build -t smarttracker-api .
-docker run -d --name smarttracker-api --env-file ~/api/.env -p 8000:8000 smarttracker-api
+docker compose up -d --build
 ```
+Одноразовые сервисы перезапускаются при каждом `up`: `postgres-migrate` применяет
+миграции (`alembic upgrade head`), `cassandra-init` прогоняет `init.cql` — оба идемпотентны.
 
 ### С помощью скрипта 
 ```
@@ -96,10 +97,13 @@ docker run -d --name smarttracker-api --env-file ~/api/.env -p 8000:8000 smarttr
 ### Просмотр логов
 ```
 # последние логи
-docker logs smarttracker-api --tail 50
+docker compose logs api --tail 50
 
 # постоянные логи
-docker logs smarttracker-api -f
+docker compose logs api -f
+
+# логи миграций
+docker compose logs postgres-migrate
 ```
 
 ## Справочные данные (роли и цели регистрации)
