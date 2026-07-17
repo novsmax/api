@@ -51,10 +51,19 @@ def do_run_migrations(connection):
         context.run_migrations()
 
 async def run_migrations_online() -> None:
+    # Расширения postgis_topology и postgis_tiger_geocoder создают десятки
+    # служебных таблиц в схемах topology и tiger, а образ postgis прописывает
+    # эти схемы в search_path на уровне БД. При autogenerate SQLAlchemy рефлексит
+    # всё видимое через search_path (со schema=None), из-за чего alembic считает
+    # эти таблицы «лишними» и генерирует для них op.drop_table. Приложение
+    # работает только в public (само расширение postgis установлено туда),
+    # поэтому фиксируем search_path=public при подключении миграций — это делается
+    # до открытия транзакции и не мешает коммиту alembic (в отличие от SET внутри).
     connectable = async_engine_from_config(
         config.get_section(config.config_ini_section),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
+        connect_args={"server_settings": {"search_path": "public"}},
     )
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)
